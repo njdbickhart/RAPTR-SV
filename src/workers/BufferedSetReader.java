@@ -43,15 +43,16 @@ public class BufferedSetReader {
     
     private int splitcounter = 0;
     private int divetcounter = 0;
-    private HashMap<String, ArrayList<splitRead>> soleSplits;
+    private HashMap<String, ArrayList<splitRead>> soleSplits = new HashMap<>();
     //private HashMap<String, ArrayList<anchorRead>> anchors;
-    private readNameMappings anchorMaps;
+    private readNameMappings anchorMaps = new readNameMappings();
     private GapOverlap gaps;
     
     public BufferedSetReader(String flatFile, String gapFile, String chr, int buffer){
         // First, let's load the data file locations and create the gap intersection
         // tool.
         this.buffer = buffer;
+        this.chr = chr;
         this.identifyFiles(flatFile);
         this.createGapOverlapTool(gapFile);
         
@@ -201,6 +202,7 @@ public class BufferedSetReader {
                             // This balanced split pair does not intersect any known set
                             // Time to create a new set for it
                             BufferedInitialSet set = new BufferedInitialSet(this.buffer, "InitSet");
+                            set.addReadPair(work);
                             this.sets.addBedData(set);
                         }
                     }

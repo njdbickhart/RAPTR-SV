@@ -12,13 +12,19 @@ import file.BedMap;
  */
 public class SetMap<T extends BedSet> extends BedMap<T>{
     
+    public SetMap(){
+        super();
+    }
+    
     public <V extends ReadPair> boolean checkAndCombinePairs(V pair){
         if(this.containsChr(pair.Chr())){
             for(int b : utils.BinBed.getBins(pair.innerStart, pair.innerEnd)){
-                for(T set : this.getBedAbstractList(pair.Chr(), b)){
-                    if(set.pairOverlaps(pair)){
-                        set.addReadPair(pair);
-                        return true;
+                if(this.containsBin(pair.Chr(), b)){
+                    for(T set : this.getBedAbstractList(pair.Chr(), b)){
+                        if(set.pairOverlaps(pair)){
+                            set.addReadPair(pair);
+                            return true;
+                        }
                     }
                 }
             }

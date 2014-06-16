@@ -8,6 +8,7 @@ import file.BedAbstract;
 import file.BedFileException;
 import EnumSetUtils.EnumStringParser;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import setWeightCover.WeightedBed;
@@ -23,12 +24,13 @@ public class ReadPair extends WeightedBed{
     protected int mapcount = 1;
     protected FlatFile group;
     protected double ProbBasedPhred = 0.0d;
-    protected Enum<callEnum> svType;
+    protected callEnum svType;
     protected int anchorStart = -1;
     protected String anchorChr = "NA";
 
     
     public ReadPair(String line, FlatFile group, readEnum tag){
+        this.rFlags = EnumSet.noneOf(readEnum.class);
         this.group = group;
         line = line.trim();
         String[] segs = line.split("\t");

@@ -173,6 +173,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         }
         ReadPair working = (ReadPair)a;
         this.refineBedCoords(working.Start(), working.End(), working.getInnerEnd(), working.getInnerEnd());
+        this.chr = working.Chr();
         this.pairs.add(working);
     }
 

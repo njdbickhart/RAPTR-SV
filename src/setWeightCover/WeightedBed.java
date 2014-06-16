@@ -13,7 +13,7 @@ import java.util.EnumSet;
  * @author bickhart
  */
 public abstract class WeightedBed extends BedAbstract implements WeightedSet {
-    protected EnumSet<readEnum> rFlags;
+    protected EnumSet<readEnum> rFlags = EnumSet.noneOf(readEnum.class);
     protected double weight;
 
 
