@@ -5,9 +5,9 @@
 package dataStructs;
 
 import file.BedAbstract;
-import java.util.EnumSet;
-import dataStructs.readEnum;
 import file.BedFileException;
+import EnumSetUtils.EnumStringParser;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import setWeightCover.WeightedBed;
@@ -47,6 +47,18 @@ public class ReadPair extends WeightedBed{
         }
     }
     
+    public ReadPair(String segs[]){
+        this.name = segs[0];
+        this.chr = segs[1];
+        this.start = Integer.parseInt(segs[2]);
+        this.innerStart = Integer.parseInt(segs[3]);
+        this.innerEnd = Integer.parseInt(segs[4]);
+        this.end = Integer.parseInt(segs[5]);
+        this.anchorStart = Integer.parseInt(segs[6]);
+        this.anchorChr = segs[7];
+        this.rFlags = EnumSetUtils.EnumStringParser.valueOf(readEnum.class, segs[8]);
+    }
+    
     @Override
     public int compareTo(BedAbstract t) {
         return this.start - t.Start();
@@ -75,6 +87,15 @@ public class ReadPair extends WeightedBed{
         return clone;
     }
     
+    /*
+     * Getters
+     */
+    public int getInnerStart(){
+        return this.innerStart;
+    }
+    public int getInnerEnd(){
+        return this.innerEnd;
+    }
     /*
      * Setters
      */
@@ -151,22 +172,29 @@ public class ReadPair extends WeightedBed{
         }else{
             // Balanced split handling
             this.chr = split.Chr();
-            if(split.retFirstSplit().Start() > split.retSecondSplit().End()){
-                // Logic for calling CNV for this split
-            }else{
-                this.start = split.retFirstSplit().Start();
-                this.innerStart = split.retFirstSplit().End();
-                this.innerEnd = split.retSecondSplit().Start();
-                this.end = split.retSecondSplit().End();
-            }
+            splitRead firstSplit = split.retFirstSplit();
+            splitRead secondSplit = split.retSecondSplit();
+            this.svType = orientToEnum(firstSplit.Start(), secondSplit.Start(), firstSplit.forward, secondSplit.forward);
             
+            this.start = split.Start();
+            int[] sorted = sortedCoords(firstSplit.Start(), firstSplit.End(), secondSplit.Start(), secondSplit.End());
+            this.innerStart = sorted[1];
+            this.innerEnd = sorted[2];
+            this.end = split.End();
+            this.ProbBasedPhred = split.AvgProb();   
         }
+    }
+    private int[] sortedCoords(int ... a){
+        Arrays.sort(a);        
+        return a;
     }
     
     private callEnum orientToEnum(int start1, int start2, boolean forward1, boolean forward2){
-        if(start1 > start2 && forward1 && !forward2){
+        if((start1 > start2 && forward1 && !forward2) ||
+                (start1 < start2 && !forward1 && forward2)){
             return callEnum.EVERSION;
-        }else if (start1 < start2 && !forward1 && forward2){
+        }else if ((start1 < start2 && !forward1 && !forward2) ||
+                (start1 > start2 && forward1 && forward2)){
             return callEnum.INVERSION;
         }else if (start1 < start2 && forward1 && !forward2){
             return callEnum.DELETION;
@@ -192,4 +220,6 @@ public class ReadPair extends WeightedBed{
                 this.svType = callEnum.MAXDIST;            
         }
     }
+    
+
 }
