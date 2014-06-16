@@ -56,7 +56,9 @@ public class ReadPair extends WeightedBed{
         this.end = Integer.parseInt(segs[5]);
         this.anchorStart = Integer.parseInt(segs[6]);
         this.anchorChr = segs[7];
-        this.rFlags = EnumSetUtils.EnumStringParser.valueOf(readEnum.class, segs[8]);
+        this.mapcount = Integer.parseInt(segs[8]);
+        this.ProbBasedPhred = Double.parseDouble(segs[9]);
+        this.rFlags = EnumSetUtils.EnumStringParser.valueOf(readEnum.class, segs[10]);
     }
     
     @Override
@@ -76,6 +78,7 @@ public class ReadPair extends WeightedBed{
         temp.append(start).append("\t").append(innerStart).append("\t");
         temp.append(innerEnd).append("\t").append(end).append("\t");
         temp.append(anchorStart).append("\t").append(anchorChr).append("\t");
+        temp.append(mapcount).append("\t").append(ProbBasedPhred).append("\t");
         temp.append(rFlags.toString()).append(System.lineSeparator());
         return temp.toString();
     }
@@ -95,6 +98,9 @@ public class ReadPair extends WeightedBed{
     }
     public int getInnerEnd(){
         return this.innerEnd;
+    }
+    public Enum<callEnum> getSVType(){
+        return this.svType;
     }
     /*
      * Setters

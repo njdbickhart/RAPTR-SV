@@ -32,4 +32,7 @@ public abstract class WeightedBed extends BedAbstract implements WeightedSet {
         return (rFlags.contains(readEnum.Used)? true : false);
     }
     
+    public EnumSet<readEnum> getReadFlags(){
+        return this.rFlags;
+    }
 }
