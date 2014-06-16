@@ -6,8 +6,6 @@ package setWeightCover;
 
 import TempFiles.TempBed.BufferedBed;
 import TempFiles.TempBuffer;
-import TempFiles.TempDataClass;
-import com.sun.istack.internal.logging.Logger;
 import dataStructs.ReadPair;
 import dataStructs.callEnum;
 import file.BedAbstract;

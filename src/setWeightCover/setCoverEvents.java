@@ -23,7 +23,7 @@ import stats.MergerUtils;
  * @author derek.bickhart
  */
 public class setCoverEvents {
-    private BedMap setMap;
+    private BedMap<InitialSet> setMap;
     private ArrayList<InitialSet> setList; // Container for initial sets without set weight cover
     private ArrayList<pairSplit> splits; // bedmap of pairSplits
     private ArrayList<divet> divets;
@@ -36,7 +36,7 @@ public class setCoverEvents {
         this.splits = splits;
         this.gaps = gaps;
         this.names = readList;
-        this.setMap = new BedMap();
+        this.setMap = new BedMap<InitialSet>();
         this.conflicts = false;
         try{
             setEventsSplit(); // add Splits
@@ -91,7 +91,7 @@ public class setCoverEvents {
             for(String chr : this.setMap.getListChrs()){
                 for(int bins : utils.BinBed.getBins(working.Start(), working.End())){
                     if(this.setMap.containsBin(chr, bins)){
-                        ArrayList<BedAbstract> beds = this.setMap.getBedAbstractList(chr, bins);
+                        ArrayList<InitialSet> beds = this.setMap.getBedAbstractList(chr, bins);
                         for(int x = 0; x < beds.size(); x++){
                             InitialSet iSet = (InitialSet) beds.get(x);
                             if(MergerUtils.checkSVOverlap(iSet.innerStart, working.Start(), iSet.innerEnd, working.End(), 0.5d, iSet.svType, callEnum.DELETION)){
@@ -182,7 +182,7 @@ public class setCoverEvents {
             for(String chr : this.setMap.getListChrs()){
                 for(int bins : utils.BinBed.getBins(working.Start(), working.End())){
                     if(this.setMap.containsBin(chr, bins)){
-                        ArrayList<BedAbstract> beds = this.setMap.getBedAbstractList(chr, bins);
+                        ArrayList<InitialSet> beds = this.setMap.getBedAbstractList(chr, bins);
                         for(int x = 0; x < beds.size(); x++){
                             InitialSet iSet = (InitialSet) beds.get(x);
                             if(iSet.isDiscOnly()){
@@ -244,7 +244,7 @@ public class setCoverEvents {
         // Create new arraylist and sort elements into it;
         // Conflicts should fall out and be merged into the existing sets;
         ArrayList<InitialSet> safeList = new ArrayList<>();
-        ArrayList<BedAbstract> starterSets = this.setMap.getSortedBedAbstractList(chr);
+        ArrayList<InitialSet> starterSets = this.setMap.getSortedBedAbstractList(chr);
         Collections.sort(starterSets);
         int sI = 0; // safeList iterator
         for(int i = 0; i < starterSets.size(); i++){
