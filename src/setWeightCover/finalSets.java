@@ -8,6 +8,7 @@ import dataStructs.callEnum;
 import dataStructs.divet;
 import dataStructs.pairSplit;
 import file.BedAbstract;
+import gnu.trove.set.hash.THashSet;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -27,25 +28,25 @@ public abstract class finalSets extends BedAbstract{
     protected int discSupport;
     protected double sumFullSupport;
     protected double sumUnbalSupport;
-    protected InitialSet supportingReads;
+    protected BufferedInitialSet supportingReads;
     public callEnum svType;
     
-    public void initialize(InitialSet a){
+    public void initialize(BufferedInitialSet a, THashSet<String> names){
         this.chr = a.Chr();
         //refineMapsRemainingReads(a);
-        setMapData(a);
+        setMapData(a, names);
     }
-    private void setMapData(InitialSet a){
+    private void setMapData(BufferedInitialSet a, THashSet<String> names){
         this.start = a.Start();
         this.end = a.End();
-        this.innerStart = a.innerStart();
-        this.innerEnd = a.innerEnd();
-        this.splitSupport = a.splitSupport();
-        this.discSupport = a.divetSupport();
-        this.unbalancedSplitSupport = a.unbalSplitSupport();
-        this.sumFullSupport = a.SumFullSupport();
-        this.sumUnbalSupport = a.SumUnbalSupport();
-        a.SetAllReadsUsed();
+        this.innerStart = a.innerStart;
+        this.innerEnd = a.innerEnd;
+        this.splitSupport = a.splitSupport(names);
+        this.discSupport = a.divetSupport(names);
+        this.unbalancedSplitSupport = a.unbalSplitSupport(names);
+        this.sumFullSupport = a.SumFullSupport(names);
+        this.sumUnbalSupport = a.SumUnbalSupport(names);
+        names.addAll(a.getReadNames());
     }
     private void refineMapsRemainingReads(InitialSet a){
         // Takes the subsets of the internal events that have not been used

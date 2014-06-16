@@ -26,13 +26,15 @@ public class RPSRmain {
         }
         
         // Read input files and place into preliminary containers
-        readInputFiles fileParser = new readInputFiles(cmd.flatFile, cmd.gapFile, cmd.chr);
+        //readInputFiles fileParser = new readInputFiles(cmd.flatFile, cmd.gapFile, cmd.chr);
+        // TODO: implement a commandline parser argument for the buffer 
+        BufferedSetReader reader = new BufferedSetReader(cmd.flatFile, cmd.gapFile, cmd.chr, 10);
         
         // Create initial sets
-        setCoverEvents initialEvents = new setCoverEvents(fileParser.PairSplit(), fileParser.Divet(), fileParser.Gaps(), fileParser.ReadNameMappings(), cmd.chr);
+        //setCoverEvents initialEvents = new setCoverEvents(fileParser.PairSplit(), fileParser.Divet(), fileParser.Gaps(), fileParser.ReadNameMappings(), cmd.chr);
         
         // Run set weight cover to cluster sets
-        weightCoverEvents finalEvents = new weightCoverEvents(initialEvents.SetList(), cmd.chr);
+        weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), cmd.chr);
         
         // Output results
         OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), cmd.outBase + ".vhsr.insertions");

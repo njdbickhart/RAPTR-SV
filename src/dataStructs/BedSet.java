@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.logging.Level;
+import gnu.trove.set.hash.THashSet;
 import setWeightCover.BufferedInitialSet;
 import stats.MergerUtils;
 
@@ -20,11 +21,17 @@ import stats.MergerUtils;
  * @author bickhart
  */
 public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstract>{
-    protected int innerStart = -1;
-    protected int innerEnd = -1;
-    protected Enum<callEnum> svType;   
+    public int innerStart = -1;
+    public int innerEnd = -1;
+    public callEnum svType;   
     protected int maxBuffer = 10;
     protected ArrayList<ReadPair> pairs = new ArrayList<>(10);
+    
+    protected int splitSup = -1;
+    protected int divSup = -1;
+    protected int unbalSplit = -1;
+    public double sumFullSupport = -1.0d;
+    public double sumUnbalSupport = -1.0d;
     
     public void addReadPair(ReadPair bed){
         refineBedCoords(start, end, innerStart, innerEnd, bed.Start(), bed.End(), bed.innerStart, bed.innerEnd);
@@ -119,6 +126,9 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         bedSet.deleteTemp();
     }
     
+    public void reCalculateValues(THashSet<String> names){
+        populateCalculations(names);
+    }
     /*
      * Overriden methods
      */
@@ -168,11 +178,89 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
 
     @Override
     public void restoreAll() {
-        readSequentialFile();
+        if(this.hasTemp()){
+            readSequentialFile();
+        }
     }
 
     @Override
     public void pushAllToDisk() {
         dumpDataToDisk();
+    }
+    
+    /*
+     * Lazy loader
+     */
+    private void populateCalculations(THashSet<String> names){
+        this.restoreAll();
+        for(ReadPair r : this.pairs){
+            EnumSet<readEnum> working = r.getReadFlags();
+            if(working.contains(readEnum.Used) || names.contains(r.Name())){
+                continue;
+            }
+            for(readEnum w : working){
+                switch(w){
+                    case IsDisc: 
+                        this.divSup++; 
+                        this.sumFullSupport += (double) 1 / (double) r.mapcount;
+                        break;
+                    case IsSplit: 
+                        this.splitSup++; 
+                        this.sumFullSupport += (double) 1 / (double) r.mapcount;
+                        break;
+                    case IsUnbalanced: 
+                        this.unbalSplit++; 
+                        this.sumUnbalSupport += (double) 1 / (double) r.mapcount;
+                        break;
+                }
+            }
+        }
+        this.dumpDataToDisk();
+    }
+    
+    /*
+     * Getters
+     */
+    public int splitSupport(THashSet<String> names){
+        if(this.splitSup == -1){
+            this.populateCalculations(names);
+        }
+        return this.splitSup;
+    }
+    
+    public int divetSupport(THashSet<String> names){
+        if(this.divSup == -1){
+            this.populateCalculations(names);
+        }
+        return this.divSup;
+    }
+    
+    public int unbalSplitSupport(THashSet<String> names){
+        if(this.unbalSplit == -1){
+            this.populateCalculations(names);
+        }
+        return this.unbalSplit;
+    }
+    
+    public double SumFullSupport(THashSet<String> names){
+        if(this.sumFullSupport == -1.0d){
+            this.populateCalculations(names);
+        }
+        return this.sumFullSupport;
+    }
+    
+    public double SumUnbalSupport(THashSet<String> names){
+        if(this.sumUnbalSupport == -1.0d){
+            this.populateCalculations(names);
+        }
+        return this.sumUnbalSupport;
+    }
+    
+    public ArrayList<String> getReadNames(){
+        ArrayList<String> names = new ArrayList<>();
+        for(ReadPair r : this.pairs){
+            names.add(r.Name());
+        }
+        return names;
     }
 }

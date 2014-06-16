@@ -74,6 +74,12 @@ public class BufferedSetReader {
         }
         System.out.println("[RPSR INPUT] Finished loading all files!");
     }
+    /*
+     * Getters
+     */
+    public SetMap<BufferedInitialSet> getMap(){
+        return this.sets;
+    }
     
     /*
      * Loader methods
@@ -155,8 +161,6 @@ public class BufferedSetReader {
     }
     private void associateSplits(HashMap<String, ArrayList<anchorRead>> anchors, FlatFile file){        
         
-        String segs[];
-        
         try(SAMFileReader samReader = new SAMFileReader(file.getSplitsam().toFile())){
             SAMRecordIterator iterator = samReader.iterator();
             while(iterator.hasNext()){
@@ -185,6 +189,11 @@ public class BufferedSetReader {
                         continue;
                     }
                     for(pairSplit p : temp){
+                        this.splitcounter++;
+                        if(gaps.checkGapOverlap(p)){
+                            // This read pair spanned a gap! Nothing to see here...
+                            continue;
+                        }
                         ReadPair work = new ReadPair(p, file, readEnum.IsSplit);
                         work.setMapCount(this.anchorMaps.retMap(clone));
                         if(!this.sets.checkAndCombinePairs(work) 
@@ -197,6 +206,7 @@ public class BufferedSetReader {
                     }
                 }
             }
+            this.soleSplits.clear();
         }catch(Exception ex){
             Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
         }

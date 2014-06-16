@@ -5,6 +5,8 @@
 package finalSVTypes;
 
 import dataStructs.callEnum;
+import gnu.trove.set.hash.THashSet;
+import setWeightCover.BufferedInitialSet;
 import setWeightCover.InitialSet;
 import setWeightCover.finalSets;
 
@@ -17,17 +19,17 @@ public class Inversions extends finalSets{
     private finalSets ReverseSupport;
     private boolean complete = false;
     
-    public Inversions(InitialSet a){
+    public Inversions(BufferedInitialSet a, THashSet<String> names){
         // Inversions are strange, since they require evidence on both ends in order to be confirmed
         // I need to find a supporting inversion call downstream of my leftmost coordinate before completing the set
         // Unbalanced inversions will still be reported, but will be untrustworthy
         this.chr = a.Chr();
-        this.ForwardSupport = new InversionSet(a);
+        this.ForwardSupport = new InversionSet(a, names);
     }
     
     private class InversionSet extends finalSets{
-        public InversionSet(InitialSet a){
-            super.initialize(a);
+        public InversionSet(BufferedInitialSet a, THashSet<String> names){
+            super.initialize(a, names);
         }
         
     }
@@ -37,8 +39,8 @@ public class Inversions extends finalSets{
             FinalizeValues(false);
         }
     }
-    public void AddReverseSupport(InitialSet a){
-        this.ReverseSupport = new InversionSet(a);
+    public void AddReverseSupport(BufferedInitialSet a, THashSet<String> names){
+        this.ReverseSupport = new InversionSet(a, names);
         this.complete = true;
         FinalizeValues(true);
     }

@@ -4,9 +4,11 @@
  */
 package setWeightCover;
 
+import dataStructs.SetMap;
 import dataStructs.callEnum;
 import file.BedAbstract;
 import finalSVTypes.*;
+import gnu.trove.set.hash.THashSet;
 import java.util.ArrayList;
 import stats.SortWeightMap;
 import java.util.Collections;
@@ -19,20 +21,22 @@ import java.util.List;
  * @author derek.bickhart
  */
 public class weightCoverEvents{
-    private ArrayList<InitialSet> inputSets;
+    private ArrayList<BufferedInitialSet> inputSets;
     private String chr;
     private ArrayList<Inversions> inversions;
     private ArrayList<TandDup> tandup;
     private ArrayList<Deletions> deletions;
     private ArrayList<Insertions> insertions;
+    private THashSet<String> names;
     
-    public weightCoverEvents(ArrayList<InitialSet> sets, String chr){
-        this.inputSets = sets;
+    public weightCoverEvents(SetMap sets, String chr){
+        this.inputSets = sets.getSortedBedAbstractList(chr);
         this.chr = chr;
         this.inversions = new ArrayList<>();
         this.tandup = new ArrayList<>();
         this.deletions = new ArrayList<>();
         this.insertions = new ArrayList<>();
+        this.names = new THashSet<>();
         run();
     }
     
@@ -41,26 +45,44 @@ public class weightCoverEvents{
         // Create Array of elements sorted by coordinates
         ArrayList<CoordTree> coordsorted;
         coordsorted = new ArrayList<>(this.inputSets.size());
-        for(InitialSet s : this.inputSets){
-            if(s.SVType() == callEnum.INVERSION || s.SVType() == callEnum.INSINV || s.SVType() == callEnum.DELINV){
+        for(BufferedInitialSet s : this.inputSets){
+            if(s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV){
                 // Only needed for inversions
                 // Going to be greedy here and use INSINV and DELINV for Inversion finding, but will treat them
                 //  as deletions or insertions if they have high support in the main routine
                 coordsorted.add(new CoordTree(s));
             }
-            s.calcInitialSupport();
+            s.reCalculateValues(names);
         }
-        SortWeightMap supportSort = new SortWeightMap();
+        //SortWeightMap supportSort = new SortWeightMap();
         int initialSize = this.inputSets.size();
         int finalCount = 0;
         for(int z = 0; z < initialSize; z++){
             // Now sort list of elements for the weight cover algorithm 
-            Collections.sort(this.inputSets, supportSort);
+            Collections.sort(this.inputSets, new Comparator<BufferedInitialSet>() {
+
+                @Override
+                public int compare(BufferedInitialSet t, BufferedInitialSet t1) {
+                    if(t.sumFullSupport < t1.sumFullSupport) {
+                        return 1;
+                    }else if (t.sumFullSupport > t1.sumFullSupport) {
+                        return -1;
+                    }else{
+                        if (t.sumUnbalSupport < t1.sumUnbalSupport) {
+                            return 1;
+                        }else if (t.sumUnbalSupport > t1.sumUnbalSupport) {
+                            return -1;
+                        }else {
+                            return 0;
+                        }
+                    }
+                }
+            });
 
             // Since everything is sorted based on score, loop through and process events
-            InitialSet working = this.inputSets.get(0);
+            BufferedInitialSet working = this.inputSets.get(0);
             finalCount++;
-            switch(working.SVType()){
+            switch(working.svType){
                 case DELETION:
                 case DELINV:
                     ProcessDel(working); break;
@@ -72,14 +94,13 @@ public class weightCoverEvents{
                 case EVERSION:
                     ProcessTanDup(working); break;
                 default:
-                    System.out.println("Error with enum! " + working.SVType());
+                    System.out.println("Error with enum! " + working.svType);
             }
             
-            ArrayList<InitialSet> toRemove = new ArrayList<>();
+            ArrayList<BufferedInitialSet> toRemove = new ArrayList<>();
             this.inputSets.remove(0);
             for(int i = 0; i < this.inputSets.size(); i++){
-                InitialSet s = this.inputSets.get(i);
-                this.inputSets.get(i).calcInitialSupport();
+                this.inputSets.get(i).reCalculateValues(names);
                 if(this.inputSets.get(i).sumFullSupport == 0d){
                     toRemove.add(this.inputSets.get(i));
                 }
@@ -96,19 +117,19 @@ public class weightCoverEvents{
         System.out.println(System.lineSeparator() + "[VHSR WEIGHT] Finished with: " + this.chr + ": " + finalCount + " out of " + initialSize + " initial Events");
     }
     
-    private void ProcessTanDup(InitialSet a){
-        this.tandup.add(new TandDup(a));
+    private void ProcessTanDup(BufferedInitialSet a){
+        this.tandup.add(new TandDup(a, names));
     }
-    private void ProcessDel(InitialSet a){
-        this.deletions.add(new Deletions(a));
+    private void ProcessDel(BufferedInitialSet a){
+        this.deletions.add(new Deletions(a, names));
     }
-    private void ProcessIns(InitialSet a){
-        this.insertions.add(new Insertions(a));
+    private void ProcessIns(BufferedInitialSet a){
+        this.insertions.add(new Insertions(a, names));
     }
-    private void ProcessInv(InitialSet a, ArrayList<CoordTree> coords){
+    private void ProcessInv(BufferedInitialSet a, ArrayList<CoordTree> coords){
         // Find the starting coordinate for the inversion in the coord sorted array
         int initialCoord = 0;
-        Inversions temp = new Inversions(a);
+        Inversions temp = new Inversions(a, names);
         for(int i = 0; i < coords.size(); i++){
             if(coords.get(i).Start() == a.Start()){
                 initialCoord = i;
@@ -122,7 +143,7 @@ public class weightCoverEvents{
             if(coords.get(i).Start() > a.Start() + 100000){
                 break;
             }else if(coords.get(i).Start() < a.Start() + 100000){
-                temp.AddReverseSupport(coords.get(i).RetReference());
+                temp.AddReverseSupport(coords.get(i).RetReference(), names);
                 found = true;
                 break;
             }
@@ -135,8 +156,8 @@ public class weightCoverEvents{
         this.inversions.add(temp);
     }
     protected class CoordTree extends BedAbstract{
-        private InitialSet reference;
-        public CoordTree(InitialSet reference){
+        private BufferedInitialSet reference;
+        public CoordTree(BufferedInitialSet reference){
             this.start = reference.Start();
             this.end = reference.End();
             this.reference = reference;
@@ -145,7 +166,7 @@ public class weightCoverEvents{
         public int compareTo(BedAbstract t) {
             return this.start - t.Start();
         }
-        public InitialSet RetReference(){
+        public BufferedInitialSet RetReference(){
             return this.reference;
         }
     }
