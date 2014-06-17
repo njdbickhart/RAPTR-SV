@@ -35,6 +35,8 @@ public class RPSRmain {
         
         // Run set weight cover to cluster sets
         weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), cmd.chr);
+        finalEvents.calculateInitialSetStats();
+        finalEvents.run();
         
         // Output results
         OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), cmd.outBase + ".vhsr.insertions");

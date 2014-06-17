@@ -5,7 +5,7 @@
 package finalSVTypes;
 
 import dataStructs.callEnum;
-import gnu.trove.set.hash.THashSet;
+import java.util.HashSet;
 import setWeightCover.BufferedInitialSet;
 import setWeightCover.InitialSet;
 import setWeightCover.finalSets;
@@ -16,7 +16,7 @@ import setWeightCover.finalSets;
  */
 public class Insertions extends finalSets{
     
-    public Insertions(BufferedInitialSet a, THashSet<String> names){
+    public Insertions(BufferedInitialSet a, HashSet<String> names){
         super.initialize(a, names);
         this.svType = callEnum.INSERTION;
     }

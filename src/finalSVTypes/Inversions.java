@@ -5,7 +5,7 @@
 package finalSVTypes;
 
 import dataStructs.callEnum;
-import gnu.trove.set.hash.THashSet;
+import java.util.HashSet;
 import setWeightCover.BufferedInitialSet;
 import setWeightCover.InitialSet;
 import setWeightCover.finalSets;
@@ -19,7 +19,7 @@ public class Inversions extends finalSets{
     private finalSets ReverseSupport;
     private boolean complete = false;
     
-    public Inversions(BufferedInitialSet a, THashSet<String> names){
+    public Inversions(BufferedInitialSet a, HashSet<String> names){
         // Inversions are strange, since they require evidence on both ends in order to be confirmed
         // I need to find a supporting inversion call downstream of my leftmost coordinate before completing the set
         // Unbalanced inversions will still be reported, but will be untrustworthy
@@ -28,7 +28,7 @@ public class Inversions extends finalSets{
     }
     
     private class InversionSet extends finalSets{
-        public InversionSet(BufferedInitialSet a, THashSet<String> names){
+        public InversionSet(BufferedInitialSet a, HashSet<String> names){
             super.initialize(a, names);
         }
         
@@ -39,7 +39,7 @@ public class Inversions extends finalSets{
             FinalizeValues(false);
         }
     }
-    public void AddReverseSupport(BufferedInitialSet a, THashSet<String> names){
+    public void AddReverseSupport(BufferedInitialSet a, HashSet<String> names){
         this.ReverseSupport = new InversionSet(a, names);
         this.complete = true;
         FinalizeValues(true);

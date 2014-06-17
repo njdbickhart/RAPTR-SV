@@ -4,17 +4,10 @@
  */
 package setWeightCover;
 
-import TempFiles.TempBed.BufferedBed;
 import TempFiles.TempBuffer;
 import dataStructs.BedSet;
-import dataStructs.ReadPair;
-import dataStructs.callEnum;
 import file.BedAbstract;
-import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.logging.Level;
-import stats.MergerUtils;
 
 /**
  *
@@ -33,7 +26,8 @@ public class BufferedInitialSet extends BedSet implements TempBuffer<BedAbstract
      */
     @Override
     public int compareTo(BedAbstract t) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        BufferedInitialSet working = (BufferedInitialSet) t;
+        return (int) working.sumFullSupport - (int) this.sumFullSupport;
     }
 
     

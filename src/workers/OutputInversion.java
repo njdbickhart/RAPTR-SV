@@ -32,6 +32,9 @@ public class OutputInversion {
     public void WriteOut (){
         try (BufferedWriter output = Files.newBufferedWriter(outfile, Charset.forName("UTF-8")) ){
             for(Inversions event : this.sets){
+                if(!event.IsComplete()){
+                    continue;
+                }
                 String outLine = join(event.Chr(), String.valueOf(event.Start()), String.valueOf(event.InnerStart()),
                         String.valueOf(event.InnerEnd()), String.valueOf(event.End()), String.valueOf(event.svType),
                         String.valueOf(event.DiscSupport()), String.valueOf(event.SplitSupport()), String.valueOf(event.UnbalancedSplitSupport()),

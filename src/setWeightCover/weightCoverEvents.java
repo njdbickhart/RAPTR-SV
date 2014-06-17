@@ -8,11 +8,11 @@ import dataStructs.SetMap;
 import dataStructs.callEnum;
 import file.BedAbstract;
 import finalSVTypes.*;
-import gnu.trove.set.hash.THashSet;
 import java.util.ArrayList;
 import stats.SortWeightMap;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 
 
@@ -27,21 +27,27 @@ public class weightCoverEvents{
     private ArrayList<TandDup> tandup;
     private ArrayList<Deletions> deletions;
     private ArrayList<Insertions> insertions;
-    private THashSet<String> names;
+    private HashSet<String> names;
     
     public weightCoverEvents(SetMap sets, String chr){
-        this.inputSets = sets.getSortedBedAbstractList(chr);
+        this.inputSets = sets.getUnsortedBedList(chr);
         this.chr = chr;
         this.inversions = new ArrayList<>();
         this.tandup = new ArrayList<>();
         this.deletions = new ArrayList<>();
         this.insertions = new ArrayList<>();
-        this.names = new THashSet<>();
-        run();
+        this.names = new HashSet<>();
+ 
     }
     
+    public void calculateInitialSetStats(){
+        System.out.println("[RPSR WEIGHT] Calculating preliminary set values.");
+        for(BufferedInitialSet s : this.inputSets){
+            s.preliminarySetCalcs();
+        }
+    }
     
-    private void run() {
+    public void run() {
         // Create Array of elements sorted by coordinates
         ArrayList<CoordTree> coordsorted;
         coordsorted = new ArrayList<>(this.inputSets.size());
@@ -56,7 +62,7 @@ public class weightCoverEvents{
         }
         //SortWeightMap supportSort = new SortWeightMap();
         int initialSize = this.inputSets.size();
-        int finalCount = 0;
+        int finalCount = 0, removal = 0;
         for(int z = 0; z < initialSize; z++){
             // Now sort list of elements for the weight cover algorithm 
             Collections.sort(this.inputSets, new Comparator<BufferedInitialSet>() {
@@ -99,10 +105,12 @@ public class weightCoverEvents{
             
             ArrayList<BufferedInitialSet> toRemove = new ArrayList<>();
             this.inputSets.remove(0);
+            removal++;
             for(int i = 0; i < this.inputSets.size(); i++){
                 this.inputSets.get(i).reCalculateValues(names);
                 if(this.inputSets.get(i).sumFullSupport == 0d){
                     toRemove.add(this.inputSets.get(i));
+                    removal++;
                 }
             }
             for(int x = 0; x < toRemove.size(); x++){
@@ -111,10 +119,10 @@ public class weightCoverEvents{
             if(this.inputSets.isEmpty()){
                 break;
             }
-            System.out.print("[VHSR WEIGHT] Working on set number: " + z + "\r");
+            System.out.print("[RPSR WEIGHT] Working on set number: " + z + " of " + initialSize + " and removed: " + removal + "\r");
         }
         
-        System.out.println(System.lineSeparator() + "[VHSR WEIGHT] Finished with: " + this.chr + ": " + finalCount + " out of " + initialSize + " initial Events");
+        System.out.println(System.lineSeparator() + "[RPSR WEIGHT] Finished with: " + this.chr + ": " + finalCount + " out of " + initialSize + " initial Events");
     }
     
     private void ProcessTanDup(BufferedInitialSet a){

@@ -5,13 +5,13 @@
 package dataStructs;
 
 import file.BedMap;
+import java.util.ArrayList;
 
 /**
  *
  * @author bickhart
  */
 public class SetMap<T extends BedSet> extends BedMap<T>{
-    
     public SetMap(){
         super();
     }
@@ -35,10 +35,12 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
     public void checkAndCombineSets(T bed){
        if(this.containsChr(bed.Chr())){
             for(int b : utils.BinBed.getBins(bed.innerStart, bed.innerEnd)){
-                for(T set : this.getBedAbstractList(bed.Chr(), b)){
-                    if(setOverlaps(set, bed)){
-                        set.mergeBedSet(bed);
-                        return;
+                if(this.containsBin(bed.Chr(), b)){
+                    for(T set : this.getBedAbstractList(bed.Chr(), b)){
+                        if(setOverlaps(set, bed)){
+                            set.mergeBedSet(bed);
+                            return;
+                        }
                     }
                 }
             }
@@ -52,5 +54,24 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
             return true;
         }
         return false;
+    }
+    public ArrayList<BedSet> getUnsortedBedList(String chr){
+        ArrayList<BedSet> working = new ArrayList<>();
+        for(int bin : this.getBins(chr)){
+            for(BedSet b : this.getBedAbstractList(chr, bin)){
+                working.add(b);
+            }
+        }
+        return working;
+    }
+    
+    public int getCountElements(String chr){
+        int c = 0;
+        for(int bin : this.getBins(chr)){
+            for(BedSet b : this.getBedAbstractList(chr, bin)){
+                c++;
+            }
+        }
+        return c;
     }
 }

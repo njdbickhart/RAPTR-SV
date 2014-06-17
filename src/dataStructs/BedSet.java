@@ -11,8 +11,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.logging.Level;
-import gnu.trove.set.hash.THashSet;
 import setWeightCover.BufferedInitialSet;
 import stats.MergerUtils;
 
@@ -32,9 +33,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     protected int unbalSplit = -1;
     public double sumFullSupport = -1.0d;
     public double sumUnbalSupport = -1.0d;
+    protected HashMap<String, Integer> readNames = new HashMap<>();
     
     public void addReadPair(ReadPair bed){
         refineBedCoords(start, end, innerStart, innerEnd, bed.Start(), bed.End(), bed.innerStart, bed.innerEnd);
+        this.svType = (this.svType == null)? bed.svType : this.svType;
         this.bufferedAdd(bed);
     }
     public boolean pairOverlaps(ReadPair b){
@@ -118,6 +121,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         this.innerStart = a[3];
         this.innerEnd = a[4];
         this.end = a[7];
+        this.svType = (this.svType == null)? bedSet.svType : this.svType;
         
         bedSet.restoreAll();
         for(ReadPair r : bedSet.pairs){
@@ -126,7 +130,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         bedSet.deleteTemp();
     }
     
-    public void reCalculateValues(THashSet<String> names){
+    public void reCalculateValues(HashSet<String> names){
         populateCalculations(names);
     }
     /*
@@ -141,6 +145,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
                 line = line.trim();
                 String[] segs = line.split("\t");
                 ReadPair temp = new ReadPair(segs);
+                this.readNames.put(segs[0], Integer.parseInt(segs[8]));
                 this.pairs.add(temp);
             }
         }catch(IOException ex){
@@ -174,13 +179,26 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         ReadPair working = (ReadPair)a;
         this.refineBedCoords(working.Start(), working.End(), working.getInnerEnd(), working.getInnerEnd());
         this.chr = working.Chr();
+        this.svType = (this.svType == null)? working.svType : this.svType;
         this.pairs.add(working);
     }
 
     @Override
     public void restoreAll() {
-        if(this.hasTemp()){
-            readSequentialFile();
+        if(this.hasTemp() && this.readNames.isEmpty()){
+            this.openTemp('R');
+            try{
+                String line;
+                while((line = this.handle.readLine()) != null){
+                    line = line.trim();
+                    String[] segs = line.split("\t");
+                    this.readNames.put(segs[0], Integer.parseInt(segs[8]));
+                }
+            }catch(IOException ex){
+                java.util.logging.Logger.getLogger(BufferedInitialSet.class.getName()).log(Level.SEVERE, null, ex);
+            }finally{
+                this.closeTemp('R');
+            }
         }
     }
 
@@ -192,28 +210,29 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     /*
      * Lazy loader
      */
-    private void populateCalculations(THashSet<String> names){
-        this.restoreAll();
+    public void preliminarySetCalcs(){
+        this.readSequentialFile();
+        this.splitSup = 0;
+        this.divSup = 0;
+        this.unbalSplit = 0;
         for(ReadPair r : this.pairs){
-            EnumSet<readEnum> working = r.getReadFlags();
-            if(working.contains(readEnum.Used) || names.contains(r.Name())){
-                continue;
+            EnumSet<readEnum> rflags = r.getReadFlags();
+            if(rflags.contains(readEnum.IsDisc))
+                this.divSup++;
+            else if(rflags.contains(readEnum.IsSplit))
+                this.splitSup++;
+            else if(rflags.contains(readEnum.IsUnbalanced)){
+                this.unbalSplit++;
+                this.sumUnbalSupport += (double) 1 / (double) r.mapcount;
             }
-            for(readEnum w : working){
-                switch(w){
-                    case IsDisc: 
-                        this.divSup++; 
-                        this.sumFullSupport += (double) 1 / (double) r.mapcount;
-                        break;
-                    case IsSplit: 
-                        this.splitSup++; 
-                        this.sumFullSupport += (double) 1 / (double) r.mapcount;
-                        break;
-                    case IsUnbalanced: 
-                        this.unbalSplit++; 
-                        this.sumUnbalSupport += (double) 1 / (double) r.mapcount;
-                        break;
-                }
+        }
+    }
+    private void populateCalculations(HashSet<String> names){
+        this.restoreAll();
+        this.sumFullSupport = 0;
+        for(String r : this.readNames.keySet()){
+            if(!names.contains(r)){
+                this.sumFullSupport += (double) 1 / (double) this.readNames.get(r);
             }
         }
         this.dumpDataToDisk();
@@ -222,35 +241,35 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     /*
      * Getters
      */
-    public int splitSupport(THashSet<String> names){
+    public int splitSupport(HashSet<String> names){
         if(this.splitSup == -1){
             this.populateCalculations(names);
         }
         return this.splitSup;
     }
     
-    public int divetSupport(THashSet<String> names){
+    public int divetSupport(HashSet<String> names){
         if(this.divSup == -1){
             this.populateCalculations(names);
         }
         return this.divSup;
     }
     
-    public int unbalSplitSupport(THashSet<String> names){
+    public int unbalSplitSupport(HashSet<String> names){
         if(this.unbalSplit == -1){
             this.populateCalculations(names);
         }
         return this.unbalSplit;
     }
     
-    public double SumFullSupport(THashSet<String> names){
+    public double SumFullSupport(HashSet<String> names){
         if(this.sumFullSupport == -1.0d){
             this.populateCalculations(names);
         }
         return this.sumFullSupport;
     }
     
-    public double SumUnbalSupport(THashSet<String> names){
+    public double SumUnbalSupport(HashSet<String> names){
         if(this.sumUnbalSupport == -1.0d){
             this.populateCalculations(names);
         }

@@ -8,9 +8,9 @@ import dataStructs.callEnum;
 import dataStructs.divet;
 import dataStructs.pairSplit;
 import file.BedAbstract;
-import gnu.trove.set.hash.THashSet;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.logging.Level;
 import stats.MergerUtils;
@@ -31,12 +31,12 @@ public abstract class finalSets extends BedAbstract{
     protected BufferedInitialSet supportingReads;
     public callEnum svType;
     
-    public void initialize(BufferedInitialSet a, THashSet<String> names){
+    public void initialize(BufferedInitialSet a, HashSet<String> names){
         this.chr = a.Chr();
         //refineMapsRemainingReads(a);
         setMapData(a, names);
     }
-    private void setMapData(BufferedInitialSet a, THashSet<String> names){
+    private void setMapData(BufferedInitialSet a, HashSet<String> names){
         this.start = a.Start();
         this.end = a.End();
         this.innerStart = a.innerStart;
