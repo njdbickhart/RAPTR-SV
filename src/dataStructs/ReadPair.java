@@ -56,11 +56,21 @@ public class ReadPair extends WeightedBed{
         this.innerStart = Integer.parseInt(segs[3]);
         this.innerEnd = Integer.parseInt(segs[4]);
         this.end = Integer.parseInt(segs[5]);
+        // Make sure that the numbers are in the proper order for comparisons later!
+        this.reformatNums();
         this.anchorStart = Integer.parseInt(segs[6]);
         this.anchorChr = segs[7];
         this.mapcount = Integer.parseInt(segs[8]);
         this.ProbBasedPhred = Double.parseDouble(segs[9]);
         this.rFlags = EnumSetUtils.EnumStringParser.valueOf(readEnum.class, segs[10]);
+    }
+    private void reformatNums(){
+        int a[] = {this.start, this.innerStart, this.innerEnd, this.end};
+        Arrays.sort(a);
+        this.start = a[0];
+        this.innerStart = a[1];
+        this.innerEnd = a[2];
+        this.end = a[3];
     }
     
     @Override
@@ -125,7 +135,8 @@ public class ReadPair extends WeightedBed{
         }
         this.innerStart = Integer.parseInt(segs[3]);
         this.innerEnd = Integer.parseInt(segs[5]);
-        
+        // Ensure that the numbers are formatted correctly!
+        this.reformatNums();
         
         if(segs[4].equals("F")){
             this.rFlags.add(readEnum.FirstForward);
@@ -189,6 +200,7 @@ public class ReadPair extends WeightedBed{
             this.innerStart = sorted[1];
             this.innerEnd = sorted[2];
             this.end = split.End();
+            this.reformatNums();
             this.ProbBasedPhred = split.AvgProb();   
         }
     }
@@ -204,10 +216,12 @@ public class ReadPair extends WeightedBed{
         }else if ((start1 < start2 && !forward1 && !forward2) ||
                 (start1 > start2 && forward1 && forward2)){
             return callEnum.INVERSION;
-        }else if (start1 < start2 && forward1 && !forward2){
+        }else if ((start1 < start2 && forward1 && !forward2)
+                || (start1 > start2 && !forward1 && forward2)){
             return callEnum.DELETION;
+        }else{
+            return callEnum.DELINV;
         }
-        return callEnum.CONCORDANT;
     }
     
     private void strToEnum(String call){

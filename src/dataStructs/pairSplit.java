@@ -62,7 +62,15 @@ public class pairSplit extends WeightedBed{
     }
     @Override
     public int compareTo(BedAbstract t) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        pairSplit temp = (pairSplit) t;
+        if(this.isBalanced && temp.isBalanced)
+            return 0;
+        else if(this.isBalanced && !temp.isBalanced)
+            return -1;
+        else if(!this.isBalanced && !temp.isBalanced)
+            return 0;
+        else
+            return 1;
     }
 
     @Override

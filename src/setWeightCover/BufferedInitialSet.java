@@ -19,6 +19,9 @@ public class BufferedInitialSet extends BedSet implements TempBuffer<BedAbstract
     public BufferedInitialSet(int buffer, String tempdir){
         this.maxBuffer = buffer;
         this.createTemp(Paths.get(tempdir));
+        this.chr = null;
+        this.start = 0;
+        this.end = 0;
     }
     
     /*

@@ -21,6 +21,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
@@ -202,6 +203,8 @@ public class BufferedSetReader {
                         //System.err.println("[BUFFSETREADER] Error with split pairing!");
                         continue;
                     }
+                    // Sorting so that balanced splits appear first
+                    Collections.sort(temp);
                     for(pairSplit p : temp){
                         this.splitcounter++;
                         if(gaps.checkGapOverlap(p)){
@@ -210,8 +213,9 @@ public class BufferedSetReader {
                         }
                         ReadPair work = new ReadPair(p, file, readEnum.IsSplit);
                         work.setMapCount(this.anchorMaps.retMap(clone));
-                        if(!dSet.checkAndCombinePairs(work) 
-                                && !work.getReadFlags().contains(readEnum.IsUnbalanced)){
+                        if(!dSet.checkAndCombinePairs(work)){
+                            if(work.getReadFlags().contains(readEnum.IsUnbalanced))
+                                continue;
                             // This balanced split pair does not intersect any known set
                             // Time to create a new set for it
                             BufferedInitialSet set = new BufferedInitialSet(this.buffer, "InitSet");

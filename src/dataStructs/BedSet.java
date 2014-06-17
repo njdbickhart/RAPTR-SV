@@ -35,30 +35,55 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     public double sumUnbalSupport = -1.0d;
     protected HashMap<String, Integer> readNames = new HashMap<>();
     
+    
     public void addReadPair(ReadPair bed){
-        refineBedCoords(start, end, innerStart, innerEnd, bed.Start(), bed.End(), bed.innerStart, bed.innerEnd);
+        //refineCoords(bed.Start(), bed.End(), bed.innerStart, bed.innerEnd);
         this.svType = (this.svType == null)? bed.svType : this.svType;
         this.bufferedAdd(bed);
     }
     public boolean pairOverlaps(ReadPair b){
-        if((this.innerStart < b.innerEnd
+        if(b.getReadFlags().contains(readEnum.IsDisc)){
+            if((this.start < b.End() && this.end > b.Start())
+                    && svTypeConsistency(this.svType, b.getSVType())){
+                // Discordant read overlap
+                return true;
+            }
+        }else if(b.getReadFlags().contains(readEnum.IsSplit)){
+            if((this.innerStart < b.innerEnd
                 && this.innerEnd > b.innerStart)
                 && svTypeConsistency(this.svType, b.getSVType())){
-            // A disc read or balanced split that is within the read aligment regions
-            return true;
-        }else if((b.Start() > this.Start() && b.Start() < this.innerStart)
-                || (b.End() > this.innerEnd && b.End() < this.end)){
-            // Could be an unbalanced split that we want to add here
-            if(b.getReadFlags().contains(readEnum.IsUnbalanced)
-                && readFlagConsistency(b.getReadFlags(), b.Start(), b.End()))
+                // Split read overlap
                 return true;
-        }else if(b.getReadFlags().contains(readEnum.IsSplit)
-                && !b.getReadFlags().contains(readEnum.IsUnbalanced)
-                && (b.Start() > this.start && b.End() < this.end)
-                && (b.innerStart >= this.innerStart && b.innerEnd <= this.innerEnd)){
-            // A balanced split that is within the read alignment regions of a disc read
-            return true;
+            }else if(this.innerStart == b.innerStart && this.innerEnd == b.innerEnd
+                    && svTypeConsistency(this.svType, b.getSVType())){
+                return true;
+            }
+        }else{
+            if((b.Start() > this.Start() && b.Start() < this.innerStart)
+                || (b.End() > this.innerEnd && b.End() < this.end)){
+                // Discordant split read overlap
+                if(readFlagConsistency(b.getReadFlags(), b.Start(), b.End()))
+                    return true;
+            }
         }
+        /*if((this.innerStart < b.innerEnd
+         * && this.innerEnd > b.innerStart)
+         * && svTypeConsistency(this.svType, b.getSVType())){
+         * // A disc read or balanced split that is within the read aligment regions
+         * return true;
+         * }else if((b.Start() > this.Start() && b.Start() < this.innerStart)
+         * || (b.End() > this.innerEnd && b.End() < this.end)){
+         * // Could be an unbalanced split that we want to add here
+         * if(b.getReadFlags().contains(readEnum.IsUnbalanced)
+         * && readFlagConsistency(b.getReadFlags(), b.Start(), b.End()))
+         * return true;
+         * }else if(b.getReadFlags().contains(readEnum.IsSplit)
+         * && !b.getReadFlags().contains(readEnum.IsUnbalanced)
+         * && (b.Start() > this.start && b.End() < this.end)
+         * && (b.innerStart >= this.innerStart && b.innerEnd <= this.innerEnd)){
+         * // A balanced split that is within the read alignment regions of a disc read
+         * return true;
+         * }*/
         return false;
     }
     protected boolean readFlagConsistency(EnumSet<readEnum> rflags, int start, int end){
@@ -106,21 +131,46 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         }
     }
     
+    private void refineStartCoords(int ... a){
+        Arrays.sort(a);
+        if(a.length != 4){
+            throw new NullPointerException("[BEDSET SORT] Array size of 4 expected!");
+        }
+        this.start = a[0];
+        this.innerStart = a[3];
+    }
+    
+    private void refineEndCoords(int ... a){
+        Arrays.sort(a);
+        if(a.length != 4){
+            throw new NullPointerException("[BEDSET SORT] Array size of 4 expected!");
+        }
+        this.innerEnd = a[0];
+        this.end = a[3];
+    }
+    
     protected void refineCoords(int start, int end, int innerStart, int innerEnd){
-        this.start = MergerUtils.getRefineCoords(this.start, start, false);
-        this.end = MergerUtils.getRefineCoords(this.end, end, true);
-        this.innerStart = MergerUtils.getRefineCoords(this.innerStart, innerStart, true);
-        this.innerEnd = MergerUtils.getRefineCoords(this.innerEnd, innerEnd, false);
+        if(this.start == 0 && this.end == 0){
+            this.start = start;
+            this.end = end;
+            this.innerStart = innerStart;
+            this.innerEnd = innerEnd;
+        }else{
+            this.start = MergerUtils.getRefineCoords(this.start, start, false);
+            this.end = MergerUtils.getRefineCoords(this.end, end, true);
+            this.innerStart = MergerUtils.getRefineCoords(this.innerStart, innerStart, true);
+            this.innerEnd = MergerUtils.getRefineCoords(this.innerEnd, innerEnd, false);
+        }
     }
     
     public <T extends BedSet> void mergeBedSet(T bedSet){
-        int[] a = {this.start, this.end, this.innerStart, this.innerEnd, bedSet.start,
-            bedSet.end, bedSet.innerStart, bedSet.innerEnd};
+        int[] a = {bedSet.start, bedSet.end, bedSet.innerStart, bedSet.innerEnd};
+         //this.refineCoords(bedSet.start, bedSet.end, bedSet.innerStart, bedSet.innerEnd);
         Arrays.sort(a);
-        this.start = a[0];
-        this.innerStart = a[3];
-        this.innerEnd = a[4];
-        this.end = a[7];
+        
+        
+        this.refineStartCoords(this.start, this.innerStart, a[0], a[1]);
+        this.refineEndCoords(this.end, this.innerEnd, a[2], a[3]);
         this.svType = (this.svType == null)? bedSet.svType : this.svType;
         
         bedSet.restoreAll();
@@ -177,7 +227,16 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
             this.dumpDataToDisk();            
         }
         ReadPair working = (ReadPair)a;
-        this.refineBedCoords(working.Start(), working.End(), working.getInnerEnd(), working.getInnerEnd());
+        //this.refineBedCoords(working.Start(), working.End(), working.getInnerEnd(), working.getInnerEnd());
+        if(this.start == 0 && this.end == 0){
+            this.start = working.Start();
+            this.innerStart = working.innerStart;
+            this.innerEnd = working.innerEnd;
+            this.end = working.End();
+        }else{
+            this.refineStartCoords(this.start, this.innerStart, working.Start(), working.innerStart);
+            this.refineEndCoords(this.end, this.innerEnd, working.End(), working.innerEnd);
+        }
         this.chr = working.Chr();
         this.svType = (this.svType == null)? working.svType : this.svType;
         this.pairs.add(working);

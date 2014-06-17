@@ -50,5 +50,6 @@ public class RPSRmain {
         
         OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), cmd.outBase + ".vhsr.inversions");
         inversions.WriteOut();
+        System.exit(0);
     }
 }
