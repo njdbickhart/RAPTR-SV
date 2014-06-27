@@ -19,16 +19,46 @@ import workers.FlatFile;
  * @author bickhart
  */
 public class ReadPair extends WeightedBed{
+    /**
+     *
+     */
     protected int innerStart = -1;
+    /**
+     *
+     */
     protected int innerEnd = -1;
+    /**
+     *
+     */
     protected int mapcount = 1;
+    /**
+     *
+     */
     protected FlatFile group;
+    /**
+     *
+     */
     protected double ProbBasedPhred = 0.0d;
+    /**
+     *
+     */
     protected callEnum svType;
+    /**
+     *
+     */
     protected int anchorStart = -1;
+    /**
+     *
+     */
     protected String anchorChr = "NA";
 
     
+    /**
+     *
+     * @param line
+     * @param group
+     * @param tag
+     */
     public ReadPair(String line, FlatFile group, readEnum tag){
         this.rFlags = EnumSet.noneOf(readEnum.class);
         this.group = group;
@@ -42,6 +72,12 @@ public class ReadPair extends WeightedBed{
         }
     }
     
+    /**
+     *
+     * @param split
+     * @param group
+     * @param tag
+     */
     public ReadPair(pairSplit split, FlatFile group, readEnum tag){
         this.group = group;
         if(tag == readEnum.IsSplit){
@@ -49,6 +85,10 @@ public class ReadPair extends WeightedBed{
         }
     }
     
+    /**
+     *
+     * @param segs
+     */
     public ReadPair(String segs[]){
         this.name = segs[0];
         this.chr = segs[1];
@@ -73,16 +113,28 @@ public class ReadPair extends WeightedBed{
         this.end = a[3];
     }
     
+    /**
+     *
+     * @param t
+     * @return
+     */
     @Override
     public int compareTo(BedAbstract t) {
         return this.start - t.Start();
     }
 
+    /**
+     *
+     */
     @Override
     public void calcWeight() {
         this.weight = (double) 1 / (double) this.mapcount;
     }
     
+    /**
+     *
+     * @return
+     */
     @Override
     public String toString(){
         StringBuilder temp = new StringBuilder();
@@ -95,6 +147,11 @@ public class ReadPair extends WeightedBed{
         return temp.toString();
     }
     
+    /**
+     *
+     * @param readName
+     * @return
+     */
     public String getCloneName(String readName){
         String clone;
         String[] nameSplit = readName.split("[/_]");
@@ -105,12 +162,24 @@ public class ReadPair extends WeightedBed{
     /*
      * Getters
      */
+    /**
+     *
+     * @return
+     */
     public int getInnerStart(){
         return this.innerStart;
     }
+    /**
+     *
+     * @return
+     */
     public int getInnerEnd(){
         return this.innerEnd;
     }
+    /**
+     *
+     * @return
+     */
     public Enum<callEnum> getSVType(){
         return this.svType;
     }
@@ -118,6 +187,10 @@ public class ReadPair extends WeightedBed{
      * Setters
      */
     
+    /**
+     *
+     * @param count
+     */
     public void setMapCount(int count){
         this.mapcount = count;
     }

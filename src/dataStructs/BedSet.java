@@ -22,25 +22,67 @@ import stats.MergerUtils;
  * @author bickhart
  */
 public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstract>{
+    /**
+     * The beginning of the interior, high confidence, coordinates
+     */
     public int innerStart = -1;
+    /**
+     * The end of the interior, high confidence, coordinates
+     */
     public int innerEnd = -1;
+    /**
+     * The type of SV this indicates
+     */
     public callEnum svType;   
+    /**
+     * The maximum amount of read pairs to store before spilling to disk
+     */
     protected int maxBuffer = 10;
+    /**
+     * Container for identified read pairs (both split and discordant reads
+     */
     protected ArrayList<ReadPair> pairs = new ArrayList<>(10);
     
+    /**
+     * Split read support
+     */
     protected int splitSup = -1;
+    /**
+     * Discordant read pair support
+     */
     protected int divSup = -1;
+    /**
+     * Number of unbalanced split reads that overlap this region
+     */
     protected int unbalSplit = -1;
+    /**
+     * Total number of balanced splits and discordant reads divided by their mappings
+     */
     public double sumFullSupport = -1.0d;
+    /**
+     * Total number of unbalanced split reads divided by their mappings
+     */
     public double sumUnbalSupport = -1.0d;
+    /**
+     * Container for read names, to ensure that the object has the read mapping numbers and can tell if a read has been previously used
+     */
     protected HashMap<String, Integer> readNames = new HashMap<>();
     
     
+    /**
+     * Adds a ReadPair object to this container and modifies the coordinates appropriately
+     * @param bed A ReadPair object
+     */
     public void addReadPair(ReadPair bed){
         //refineCoords(bed.Start(), bed.End(), bed.innerStart, bed.innerEnd);
         this.svType = (this.svType == null)? bed.svType : this.svType;
         this.bufferedAdd(bed);
     }
+    /**
+     * Determines if a ReadPair intersects with this candidate SV
+     * @param b A ReadPair Object
+     * @return
+     */
     public boolean pairOverlaps(ReadPair b){
         if(b.getReadFlags().contains(readEnum.IsDisc)){
             if((this.start < b.End() && this.end > b.Start())
@@ -86,6 +128,13 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
          * }*/
         return false;
     }
+    /**
+     * Determines if a ReadPair overlaps with this candidate SV
+     * @param rflags
+     * @param start
+     * @param end
+     * @return
+     */
     protected boolean readFlagConsistency(EnumSet<readEnum> rflags, int start, int end){
         if(rflags.contains(readEnum.FirstForward)
                 && start < this.innerEnd){
@@ -96,6 +145,12 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         }            
         return false;
     }
+    /**
+     *
+     * @param a
+     * @param b
+     * @return
+     */
     protected boolean svTypeConsistency(Enum<callEnum> a, Enum<callEnum> b){
         if(a.equals(b)){
             return true;
@@ -149,6 +204,13 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         this.end = a[3];
     }
     
+    /**
+     *
+     * @param start
+     * @param end
+     * @param innerStart
+     * @param innerEnd
+     */
     protected void refineCoords(int start, int end, int innerStart, int innerEnd){
         if(this.start == 0 && this.end == 0){
             this.start = start;
@@ -163,6 +225,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         }
     }
     
+    /**
+     *
+     * @param <T>
+     * @param bedSet
+     */
     public <T extends BedSet> void mergeBedSet(T bedSet){
         int[] a = {bedSet.start, bedSet.end, bedSet.innerStart, bedSet.innerEnd};
          //this.refineCoords(bedSet.start, bedSet.end, bedSet.innerStart, bedSet.innerEnd);
@@ -180,11 +247,18 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         bedSet.deleteTemp();
     }
     
+    /**
+     *
+     * @param names
+     */
     public void reCalculateValues(HashSet<String> names){
         populateCalculations(names);
     }
     /*
      * Overriden methods
+     */
+    /**
+     *
      */
     @Override
     public void readSequentialFile() {
@@ -206,6 +280,9 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         
     }
 
+    /**
+     *
+     */
     @Override
     public void dumpDataToDisk() {
         this.openTemp('A');
@@ -242,6 +319,9 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         this.pairs.add(working);
     }
 
+    /**
+     *
+     */
     @Override
     public void restoreAll() {
         if(this.hasTemp() && this.readNames.isEmpty()){
@@ -261,6 +341,9 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         }
     }
 
+    /**
+     *
+     */
     @Override
     public void pushAllToDisk() {
         dumpDataToDisk();
@@ -268,6 +351,9 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     
     /*
      * Lazy loader
+     */
+    /**
+     *
      */
     public void preliminarySetCalcs(){
         this.readSequentialFile();
@@ -300,6 +386,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     /*
      * Getters
      */
+    /**
+     *
+     * @param names
+     * @return
+     */
     public int splitSupport(HashSet<String> names){
         if(this.splitSup == -1){
             this.populateCalculations(names);
@@ -307,6 +398,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         return this.splitSup;
     }
     
+    /**
+     *
+     * @param names
+     * @return
+     */
     public int divetSupport(HashSet<String> names){
         if(this.divSup == -1){
             this.populateCalculations(names);
@@ -314,6 +410,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         return this.divSup;
     }
     
+    /**
+     *
+     * @param names
+     * @return
+     */
     public int unbalSplitSupport(HashSet<String> names){
         if(this.unbalSplit == -1){
             this.populateCalculations(names);
@@ -321,6 +422,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         return this.unbalSplit;
     }
     
+    /**
+     *
+     * @param names
+     * @return
+     */
     public double SumFullSupport(HashSet<String> names){
         if(this.sumFullSupport == -1.0d){
             this.populateCalculations(names);
@@ -328,6 +434,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         return this.sumFullSupport;
     }
     
+    /**
+     *
+     * @param names
+     * @return
+     */
     public double SumUnbalSupport(HashSet<String> names){
         if(this.sumUnbalSupport == -1.0d){
             this.populateCalculations(names);
@@ -335,6 +446,10 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         return this.sumUnbalSupport;
     }
     
+    /**
+     *
+     * @return
+     */
     public ArrayList<String> getReadNames(){
         ArrayList<String> names = new ArrayList<>();
         for(ReadPair r : this.pairs){
