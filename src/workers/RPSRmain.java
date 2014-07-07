@@ -4,7 +4,7 @@
  */
 package workers;
 
-import setWeightCover.setCoverEvents;
+import GetCmdOpt.SimpleModeCmdLineParser;
 import setWeightCover.weightCoverEvents;
 
 /**
@@ -51,5 +51,32 @@ public class RPSRmain {
         OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), cmd.outBase + ".vhsr.inversions");
         inversions.WriteOut();
         System.exit(0);
+    }
+    
+    private static SimpleModeCmdLineParser PrepareCMDOptions(){
+        String nl = System.lineSeparator();
+        SimpleModeCmdLineParser cmd = new SimpleModeCmdLineParser("RPSR.jar\tA tool to cluster split and paired end reads" + nl
+            + "Usage: java -jar RPSR.jar [mode] [mode specific options]" + nl
+                + "Modes:" + nl
+                + "\tpreprocess\tInterprets BAM files to generate metadata for \"cluster\" mode" + nl 
+                + "\tcluster\tThe mode that processes metadata generated from the main program" + nl,
+                "cluster",
+                "preprocess"
+        );
+        
+        cmd.AddMode("cluster", 
+                "RPSR cluster mode" + nl +
+                "Usage: java -jar RPSR.jar [-s filelist -c chromosome -g gap file -o output prefix] (optional: -g gmsfile list)" + nl
+                + "\t-s\tFlatfile containing records from the same reads" + nl
+                + "\t-c\tChromosome to be processed" + nl
+                + "\t-g\tAssembly Gap bed file" + nl
+                + "\t-o\tOutput file prefix and directory" + nl
+                + "\t-m\tGMS file for weight rebalancing[optional]" + nl,
+                "s:c:g:o:m:", 
+                "scgo", 
+                "scgom", 
+                "flatfile", "chromosome", "gapfile", "outbase", "gms");
+        
+        return cmd;
     }
 }
