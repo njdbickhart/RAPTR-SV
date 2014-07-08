@@ -75,6 +75,7 @@ public class BufferedSetReader {
             
             for(BedSet s : dSet.getUnsortedBedList(chr)){
                 this.sets.checkAndCombineSets((BufferedInitialSet)s);
+                    
             }
             int curSets = this.sets.getCountElements(chr);
             

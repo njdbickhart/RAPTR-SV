@@ -32,20 +32,21 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
        return false;
     }
     
-    public void checkAndCombineSets(T bed){
+    public boolean checkAndCombineSets(T bed){
        if(this.containsChr(bed.Chr())){
             for(int b : utils.BinBed.getBins(bed.innerStart, bed.innerEnd)){
                 if(this.containsBin(bed.Chr(), b)){
                     for(T set : this.getBedAbstractList(bed.Chr(), b)){
                         if(setOverlaps(set, bed)){
                             set.mergeBedSet(bed);
-                            return;
+                            return true;
                         }
                     }
                 }
             }
         }
        this.addBedData(bed);
+       return false;
     }
     
     private boolean setOverlaps(T a, T b){

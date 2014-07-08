@@ -269,8 +269,15 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
                 line = line.trim();
                 String[] segs = line.split("\t");
                 ReadPair temp = new ReadPair(segs);
+                if(temp.getReadFlags().contains(readEnum.IsSplit))
+                    this.splitSup += 1;
+                if(temp.getReadFlags().contains(readEnum.IsUnbalanced)){
+                    this.unbalSplit += 1;
+                    this.sumUnbalSupport += (double) 1 / (double) Integer.parseInt(segs[8]);
+                }
+                if(temp.getReadFlags().contains(readEnum.IsDisc))
+                    this.divSup += 1;
                 this.readNames.put(segs[0], Integer.parseInt(segs[8]));
-                this.pairs.add(temp);
             }
         }catch(IOException ex){
             java.util.logging.Logger.getLogger(BufferedInitialSet.class.getName()).log(Level.SEVERE, null, ex);
@@ -318,6 +325,12 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         this.svType = (this.svType == null)? working.svType : this.svType;
         this.pairs.add(working);
     }
+    
+    public boolean separateSplitSet(){
+        if(this.splitSup > 0)
+            return true;
+        return false;
+    }
 
     /**
      *
@@ -356,21 +369,12 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      *
      */
     public void preliminarySetCalcs(){
-        this.readSequentialFile();
+        
         this.splitSup = 0;
         this.divSup = 0;
         this.unbalSplit = 0;
-        for(ReadPair r : this.pairs){
-            EnumSet<readEnum> rflags = r.getReadFlags();
-            if(rflags.contains(readEnum.IsDisc))
-                this.divSup++;
-            else if(rflags.contains(readEnum.IsSplit))
-                this.splitSup++;
-            else if(rflags.contains(readEnum.IsUnbalanced)){
-                this.unbalSplit++;
-                this.sumUnbalSupport += (double) 1 / (double) r.mapcount;
-            }
-        }
+        this.readSequentialFile();
+        
     }
     private void populateCalculations(HashSet<String> names){
         this.restoreAll();

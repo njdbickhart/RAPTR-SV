@@ -71,11 +71,12 @@ public class RPSRmain {
                 + "\t-c\tChromosome to be processed" + nl
                 + "\t-g\tAssembly Gap bed file" + nl
                 + "\t-o\tOutput file prefix and directory" + nl
-                + "\t-m\tGMS file for weight rebalancing[optional]" + nl,
-                "s:c:g:o:m:", 
+                + "\t-m\tGMS file for weight rebalancing[optional]" + nl
+                + "\t-f\tFloating point value for threshold of detection [optional; default is one]" + nl,
+                "s:c:g:o:m:f:", 
                 "scgo", 
-                "scgom", 
-                "flatfile", "chromosome", "gapfile", "outbase", "gms");
+                "scgomf", 
+                "flatfile", "chromosome", "gapfile", "outbase", "gms", "filter");
         
         return cmd;
     }

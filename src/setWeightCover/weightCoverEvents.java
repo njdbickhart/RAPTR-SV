@@ -108,7 +108,7 @@ public class weightCoverEvents{
             removal++;
             for(int i = 0; i < this.inputSets.size(); i++){
                 this.inputSets.get(i).reCalculateValues(names);
-                if(this.inputSets.get(i).sumFullSupport == 0d){
+                if(this.inputSets.get(i).sumFullSupport <= 1d){
                     toRemove.add(this.inputSets.get(i));
                     removal++;
                 }
