@@ -20,6 +20,14 @@ public class FlatFile {
     private Path splitsam;
     private double insert;
     private double stdev;
+    
+    public FlatFile(String splitsam, String divet, String anchor, double insert, double stdev){
+        this.anchor = Paths.get(anchor);
+        this.splitsam = Paths.get(splitsam);
+        this.divet = Paths.get(divet);
+        this.insert = insert;
+        this.stdev = stdev;
+    }
 
     public FlatFile(String flatFileLine) {
         flatFileLine = flatFileLine.trim();
@@ -51,5 +59,10 @@ public class FlatFile {
     }
     public Double getStdev(){
         return this.stdev;
+    }
+    
+    @Override
+    public String toString(){
+        return this.splitsam.toString() + "\t" + this.divet.toString() + "\t" + this.anchor.toString() + "\t" + this.insert + "\t" + this.stdev + System.lineSeparator();
     }
 }

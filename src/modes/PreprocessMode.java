@@ -12,4 +12,13 @@ package modes;
  */
 public class PreprocessMode {
     
+    public void run(){
+        // Generate BAM file metadata class
+        
+        // Run through the BAM file generating split and divet data
+        
+        // Run MrsFAST on the split fastqs and generate bam files
+        
+        // Capture all output into a flatfile format and prepare to print it
+    }
 }
