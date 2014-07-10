@@ -6,6 +6,10 @@
 
 package dataStructs;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -19,13 +23,43 @@ import net.sf.samtools.SAMRecord;
  */
 public class DivetOutputHandle {
     private final Path path;
+    private BufferedWriter out;
+    private boolean fileopen = false;
     
     public DivetOutputHandle(String file){
         path = Paths.get(file);
     }
     
-    // Divet file format:
-    // 20VQ5P1:104:D09KFACXX:7:2106:7435:121010:0      chr27   23699238        23699288        F       23695946        23695996        F       delinv  0       37.47  1.00000000000000000000   1
+    public void OpenHandle(){
+        try{
+            out = Files.newBufferedWriter(path, Charset.defaultCharset());
+        }catch(IOException ex){
+            ex.printStackTrace();
+        }
+        fileopen = true;
+    }
     
+    public void CloseHandle(){
+        try{
+            out.close();
+        }catch(IOException ex){
+            ex.printStackTrace();
+        }
+        fileopen = false;
+    }
     
+    public void PrintDivetOut(ArrayList<divet> d){
+        try{
+            for(divet a : d){
+                out.write(StrUtils.StrArray.Join(a.divout, "\t"));
+                out.newLine();
+            }
+        }catch(IOException ex){
+            ex.printStackTrace();
+        }
+    }
+        
+    public boolean fileIsOpen(){
+        return fileopen;
+    }
 }

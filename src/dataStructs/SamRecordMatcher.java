@@ -8,12 +8,18 @@ package dataStructs;
 
 import TempFiles.TempBuffer;
 import TempFiles.TempDataClass;
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import net.sf.samtools.SAMReadGroupRecord;
 import net.sf.samtools.SAMRecord;
+import workers.MrsFastRuntimeFactory;
 
 /**
  *
@@ -67,7 +73,7 @@ public class SamRecordMatcher extends TempDataClass {
                 for(String clone : buffer.get(r).keySet()){
                     for(short num : buffer.get(r).get(clone).keySet()){
                         for(SAMRecord sam : buffer.get(r).get(clone).get(num)){
-                            this.output.write(r.getId() + "\t" + clone + "\t" + num + "\t" + sam.getReadString());
+                            this.output.write(r.getId() + "\t" + clone + "\t" + num + "\t" + sam.getSAMString());
                             this.output.newLine();
                         }
                     }
@@ -81,27 +87,63 @@ public class SamRecordMatcher extends TempDataClass {
         this.buffer.clear();
     }
     
-    public void convertToDivet(Map<String, DivetOutputHandle> divets){
+    public void convertToVariant(Map<String, DivetOutputHandle> divets, Map<String, SplitOutputHandle> splits, Map<String, Integer[]> thresholds){
         if(!this.buffer.isEmpty())
             this.dumpDataToDisk();
         
-        /*
-        Use Unix sort to sort the temp file by multiple columns
-        */
-        
-        this.openTemp('R');
-        try{
-            String line;
-            while((line = this.handle.readLine()) != null){
+        try {
+            // Use Unix sort to sort the file by the multiple beginning columns
+            ProcessBuilder p = new ProcessBuilder("sort", "-k1,1", "-k2,2", "-k3,3", this.tempFile.toString());
+            p.redirectError(new File("sort.error.log"));
+            Process sort = p.start();
+            sort.waitFor();
+            
+            String line, lastrg = "none", last = "none";
+            ArrayList<String[]> records = new ArrayList<>();
+            BufferedReader input = new BufferedReader(new InputStreamReader(sort.getInputStream()));
+            while((line = input.readLine()) != null){
                 line = line.trim();
                 String[] segs = line.split("\t");
+                
+                // clone name is not the same as the last one
+                if(!segs[1].equals(last)){
+                    if(!records.isEmpty()){
+                        if(this.isSplit(segs)){
+                            if(this.isAnchor(segs))
+                                splits.get(lastrg).AddAnchor(segs);
+                            else
+                                splits.get(lastrg).AddSplit(segs);
+                        }else{
+                            Integer[] t = thresholds.get(lastrg);
+                            SamToDivet converter = new SamToDivet(last, t[0], t[1], t[2]);
+                            for(String[] r : records)
+                                converter.addLines(r);
+                            divets.get(lastrg).PrintDivetOut(converter.getDivets());
+                        }
+                        records.clear();
+                    }
+                }
+                
+                records.add(segs);
+                last = segs[1];
+                lastrg = segs[0];
             }
-        }catch(IOException ex){
-            ex.printStackTrace();
-        }finally{
-            this.closeTemp('A');
+            
+            input.close();
+        } catch (IOException | InterruptedException ex) {
+            Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
         }
         
+    }
+    
+    private boolean isSplit(String[] segs){
+        int fflags = Integer.parseInt(segs[4]);
+        return (fflags & 0x8) == 0x8 || (fflags & 0x4) == 0x4;
+    }
+    
+    private boolean isAnchor(String[] segs){
+        int fflags = Integer.parseInt(segs[4]);
+        return (fflags & 0x8) == 0x8;
     }
     
     private String getCloneName(String readName){

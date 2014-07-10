@@ -28,6 +28,7 @@ public class divet extends WeightedBed{
     protected FlatFile group;
     protected double avgPhred;
     protected double probPhred;
+    public String[] divout;
     
     public divet (String divet, FlatFile group){
         divet = divet.replaceAll("\n", "");
@@ -44,6 +45,14 @@ public class divet extends WeightedBed{
         strToEnum(segs[8]);
         this.name = segs[0].trim();
         this.group = group;
+    }
+    
+    /**
+     * Constructor for SamToDivet converter
+     * @param values 
+     */
+    public divet(String ... values){
+        divout = values;
     }
     @Override
     public int compareTo(BedAbstract t) {

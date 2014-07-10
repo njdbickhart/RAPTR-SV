@@ -6,18 +6,10 @@
 
 package workers;
 
-import java.util.concurrent.Callable;
-
 /**
  * This program runs MrsFAST and returns the output BAM file name
  * @author bickhart
  */
-public class MrsFastRuntimeFactory implements Callable<String>{
-
-    
-    @Override
-    public String call() throws Exception {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
+public class MrsFastRuntimeFactory{
     
 }
