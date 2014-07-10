@@ -25,6 +25,7 @@ import net.sf.samtools.SAMRecordIterator;
  */
 public class BamMetadataGeneration {
     private final List<String> rgList = new ArrayList<>();
+    private HashMap<String, Double[]> values = new HashMap<>();
     private HashMap<String, ArrayList<Integer>> insertSizes = new HashMap<>();
     private SAMFileHeader header;
     private final boolean expectRG;
@@ -86,6 +87,8 @@ public class BamMetadataGeneration {
         this.insertSizes.keySet().stream().forEach((r) -> {
             double avg = stats.StdevAvg.IntAvg(this.insertSizes.get(r));
             double stdev = stats.StdevAvg.stdevInt(avg, this.insertSizes.get(r));
+            Double[] d = {avg, stdev};
+            this.values.put(r, d);
             int lower = (int) Math.round(avg - (3 * stdev));
             int upper = (int) Math.round(avg + (3 * stdev));
             if(lower < 0)
@@ -103,5 +106,11 @@ public class BamMetadataGeneration {
                 .reduce(0, (sum, next) -> sum + next);
         
         return num >= this.rgList.size();
+    }
+    public double getSampleInsSize(String key){
+        return this.values.get(key)[0];
+    }
+    public double getSampleInsStd(String key){
+        return this.values.get(key)[1];
     }
 }

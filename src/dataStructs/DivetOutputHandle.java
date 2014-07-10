@@ -62,4 +62,8 @@ public class DivetOutputHandle {
     public boolean fileIsOpen(){
         return fileopen;
     }
+    
+    public String getDivetFileStr(){
+        return this.path.toString();
+    }
 }

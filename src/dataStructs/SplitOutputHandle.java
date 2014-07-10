@@ -120,4 +120,8 @@ public class SplitOutputHandle {
     public String fq1File(){
         return this.fq1path.toString();
     }
+    
+    public String getAnchorFileStr(){
+        return this.anchorpath.toString();
+    }
 }

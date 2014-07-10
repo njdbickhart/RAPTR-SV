@@ -30,6 +30,7 @@ import net.sf.samtools.SAMRecordIterator;
 public class MrsFastRuntimeFactory{
     private final int threads;
     private SAMFileHeader SAMFileHeader;
+    private Map<String, String> bamfiles = new HashMap<>();
     
     public MrsFastRuntimeFactory(int numthreads){
         threads = numthreads;
@@ -66,6 +67,7 @@ public class MrsFastRuntimeFactory{
                         reader.close();
                         bam.close();
                     };
+                bamfiles.put(rg, outbase + "." + rg + ".bam");
                 ex.submit(r);
             } catch (InterruptedException | ExecutionException ex1) {
                 Logger.getLogger(MrsFastRuntimeFactory.class.getName()).log(Level.SEVERE, null, ex1);
@@ -74,5 +76,9 @@ public class MrsFastRuntimeFactory{
         
         ex.shutdown();
         while(!ex.isTerminated()){}
+    }
+    
+    public Map<String, String> getBams(){
+        return this.bamfiles;
     }
 }
