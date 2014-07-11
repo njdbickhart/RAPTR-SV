@@ -147,12 +147,6 @@ public class setCoverEvents {
         System.out.println(System.lineSeparator() + "[VHSR SETCOVER] Finished loading split reads into initial containers");                
         
     }
-    private String getCloneName(String readName){
-        String clone;
-        String[] nameSplit = readName.split("[/_]");
-        clone = nameSplit[0];
-        return clone;
-    }
     private void setEventsDisc() throws BedFileException{
         
         int num = 0;

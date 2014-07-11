@@ -6,7 +6,6 @@ package dataStructs;
 
 import file.BedAbstract;
 import file.BedFileException;
-import EnumSetUtils.EnumStringParser;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.logging.Level;
@@ -51,7 +50,6 @@ public class ReadPair extends WeightedBed{
      *
      */
     protected String anchorChr = "NA";
-
     
     /**
      *
@@ -145,18 +143,6 @@ public class ReadPair extends WeightedBed{
         temp.append(mapcount).append("\t").append(ProbBasedPhred).append("\t");
         temp.append(rFlags.toString()).append(System.lineSeparator());
         return temp.toString();
-    }
-    
-    /**
-     *
-     * @param readName
-     * @return
-     */
-    public String getCloneName(String readName){
-        String clone;
-        String[] nameSplit = readName.split("[/_]");
-        clone = nameSplit[0];
-        return clone;
     }
     
     /*

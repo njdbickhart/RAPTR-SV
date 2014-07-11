@@ -25,10 +25,10 @@ public class ClusterMode {
     private int buffer = 10;
     
     public ClusterMode(SimpleModeCmdLineParser values){
-        flatFile = values.GetValue("flatFile");
-        chr = values.GetValue("chr");
-        gapFile = values.GetValue("gapFile");
-        outBase = values.GetValue("outBase");
+        flatFile = values.GetValue("flatfile");
+        chr = values.GetValue("chromosome");
+        gapFile = values.GetValue("gapfile");
+        outBase = values.GetValue("outbase");
         if(values.HasOpt("buffer"))
             buffer = Integer.parseInt(values.GetValue("buffer"));
     }

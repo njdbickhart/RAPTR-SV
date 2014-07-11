@@ -31,6 +31,7 @@ import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordIterator;
 import setWeightCover.BufferedInitialSet;
 import stats.GapOverlap;
+import stats.ReadNameUtility;
 
 /**
  *
@@ -50,6 +51,7 @@ public class BufferedSetReader {
     //private HashMap<String, ArrayList<anchorRead>> anchors;
     private readNameMappings anchorMaps = new readNameMappings();
     private GapOverlap gaps;
+    private ReadNameUtility rn = new ReadNameUtility();
     
     public BufferedSetReader(String flatFile, String gapFile, String chr, int buffer){
         // First, let's load the data file locations and create the gap intersection
@@ -155,8 +157,8 @@ public class BufferedSetReader {
                 }
                 String end = String.valueOf(Integer.parseInt(segs[3]) + segs[9].length());
                 anchorRead aR = new anchorRead(segs[2], segs[3], end, segs[0], segs[1], segs[11], segs[12], segs[10]);
-                String clone = getCloneName(segs[0]);
-                appendAnchorToConstruct(anchors, aR);
+                String clone = rn.GetCloneName(segs[0], Integer.valueOf(segs[1]));
+                appendAnchorToConstruct(anchors, aR, clone);
                 
                 this.anchorMaps.addRead(clone);
             }
@@ -166,8 +168,7 @@ public class BufferedSetReader {
         return anchors;
         //System.out.println("[VHSR INPUT] Finished loading " + this.anchors.size() + " anchor keys");
     }
-    private void appendAnchorToConstruct(HashMap<String, ArrayList<anchorRead>> map, anchorRead ar){
-        String clone = getCloneName(ar.Name());
+    private void appendAnchorToConstruct(HashMap<String, ArrayList<anchorRead>> map, anchorRead ar, String clone){
         if(map.containsKey(clone)){
             map.get(clone).add(ar);
         }else{
@@ -195,7 +196,7 @@ public class BufferedSetReader {
                         line.getStringAttribute("MD"), 
                         line.getBaseQualityString()
                 );
-                appendSplitToConstruct(sR);                    
+                appendSplitToConstruct(sR, rn.GetCloneName(sR.Name(), line.getFlags()));                    
             }
             for(String clone : anchors.keySet()){
                 if(this.soleSplits.containsKey(clone)){
@@ -244,7 +245,7 @@ public class BufferedSetReader {
                 // Just make sure that it isnt too long!
                 if(Math.abs(sArray.get(0).Start() - anchor.Start()) < 500000){
                     
-                    splits.add(new pairSplit(anchor, sArray.get(0)));
+                    splits.add(new pairSplit(anchor, sArray.get(0), clone));
                 }
             }
         }
@@ -256,7 +257,7 @@ public class BufferedSetReader {
                 // Easy balanced split pairing
                 // Just make sure that it isnt too long!
                 if(Math.abs(sArray.get(0).Start() - anchor.Start()) < 500000){
-                    splits.add(new pairSplit(anchor, sArray.get(0), sArray.get(1)));
+                    splits.add(new pairSplit(anchor, sArray.get(0), sArray.get(1), clone));
                 }
             }
         }
@@ -279,7 +280,7 @@ public class BufferedSetReader {
                 ArrayList<splitRead> temp = splitSeg.get(splitNums.iterator().next());
                 for(anchorRead anchor : aArray){
                     for(splitRead stemp : temp){
-                        splits.add(new pairSplit(anchor, stemp));
+                        splits.add(new pairSplit(anchor, stemp, clone));
                     }                    
                 }
             }else{
@@ -291,7 +292,7 @@ public class BufferedSetReader {
                         for(splitRead rs: reverse){
                             if(Math.abs(fs.Start() - anchor.Start()) < 500000 &&
                                     Math.abs(rs.Start() - anchor.Start()) < 500000){
-                                splits.add(new pairSplit(anchor, fs, rs));
+                                splits.add(new pairSplit(anchor, fs, rs, clone));
                             }
                         }
                     }
@@ -300,8 +301,7 @@ public class BufferedSetReader {
         }
         return splits;
     }
-    private void appendSplitToConstruct(splitRead sr){
-        String clone = getCloneName(sr.Name());
+    private void appendSplitToConstruct(splitRead sr, String clone){
         if(this.soleSplits.containsKey(clone)){
             this.soleSplits.get(clone).add(sr);
         }else{
@@ -327,11 +327,5 @@ public class BufferedSetReader {
     private void createGapOverlapTool(String gapFile){
         this.gaps = new GapOverlap(gapFile);
         System.out.println("[VHSR INPUT] Finished loading gap file: " + gapFile);
-    }
-    private String getCloneName(String readName){
-        String clone;
-        String[] nameSplit = readName.split("[/_]");
-        clone = nameSplit[0];
-        return clone;
     }
 }

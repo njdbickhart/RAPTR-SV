@@ -19,6 +19,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sf.samtools.SAMReadGroupRecord;
 import net.sf.samtools.SAMRecord;
+import stats.ReadNameUtility;
 import workers.MrsFastRuntimeFactory;
 
 /**
@@ -31,6 +32,7 @@ public class SamRecordMatcher extends TempDataClass {
     private final int threshold;
     private final boolean checkRGs;
     private final String defId = "D";
+    private final ReadNameUtility rn = new ReadNameUtility();
     
     public SamRecordMatcher(int threshold, boolean checkRGs){
         this.threshold = threshold;
@@ -38,8 +40,10 @@ public class SamRecordMatcher extends TempDataClass {
     }
     
     public void bufferedAdd(SAMRecord a) {
-        String clone = getCloneName(a.getReadName());
-        short num = getCloneNum(a.getReadName());
+        
+        String clone = rn.GetCloneName(a.getReadName(), a.getFlags());
+        short num = rn.GetCloneNum(a.getReadName(), a.getFlags());
+        
         SAMReadGroupRecord r;
         if(this.checkRGs)
             r = a.getReadGroup();
@@ -144,18 +148,5 @@ public class SamRecordMatcher extends TempDataClass {
     private boolean isAnchor(String[] segs){
         int fflags = Integer.parseInt(segs[4]);
         return (fflags & 0x8) == 0x8;
-    }
-    
-    private String getCloneName(String readName){
-        String clone;
-        String[] nameSplit = readName.split("[/_]");
-        clone = nameSplit[0];
-        return clone;
-    }
-    private short getCloneNum(String readName){
-        String clone;
-        String[] nameSplit = readName.split("[/_]");
-        clone = nameSplit[1];
-        return Short.parseShort(clone);
     }
 }

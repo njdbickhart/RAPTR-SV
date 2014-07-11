@@ -21,20 +21,20 @@ public class pairSplit extends WeightedBed{
     private int mappings = 0;
     private double avgProb;
 
-    public pairSplit(anchorRead anchor, splitRead split1, splitRead split2){
+    public pairSplit(anchorRead anchor, splitRead split1, splitRead split2, String cloneName){
         this.anchor = anchor;
         this.chr = anchor.Chr();
         this.split1 = split1;
         this.readlength = split1.End() - split1.Start();
         this.split2 = split2;
-        this.setName(getCloneName(anchor.Name()));
+        this.setName(cloneName);
         SplitCoords coords = new SplitCoords(split1.Start(), split1.End(), split2.Start(), split2.End());
         this.start = coords.OutStart();
         this.end = coords.OutEnd();
         this.isBalanced = true;
         this.avgProb = calcAvgProb(anchor, split1, split2);
     }
-    public pairSplit(anchorRead anchor, splitRead split1){
+    public pairSplit(anchorRead anchor, splitRead split1, String cloneName){
         this.anchor = anchor;
         this.chr = anchor.Chr();
         this.start = split1.Start();
