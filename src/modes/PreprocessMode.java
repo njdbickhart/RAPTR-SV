@@ -6,6 +6,7 @@
 
 package modes;
 
+import GetCmdOpt.SimpleModeCmdLineParser;
 import dataStructs.DivetOutputHandle;
 import dataStructs.SamRecordMatcher;
 import dataStructs.SplitOutputHandle;
@@ -27,15 +28,31 @@ import workers.MrsFastRuntimeFactory;
  */
 public class PreprocessMode {
     private boolean checkRG = false;
-    private String outbase;
-    private int samplimit;
+    private final String outbase;
+    private int samplimit = 1000;
     private int maxdist = 100000;
-    private String input;
+    private final String input;
     private int threads = 1;
-    private String reference;
+    private final String reference;
     
-    public PreprocessMode(HashMap<String, String> values){
+    public PreprocessMode(SimpleModeCmdLineParser values){
+        outbase = values.GetValue("output");
+        input = values.GetValue("input");
+        reference = values.GetValue("reference");
         
+        // Optional values
+        if(values.HasOpt("checkRG"))
+            if(values.GetValue("checkRG").equals("true"))
+                checkRG = true;
+            
+        if(values.HasOpt("threads"))
+            threads = Integer.parseInt(values.GetValue("threads"));
+        
+        if(values.HasOpt("maxdist"))
+            maxdist = Integer.parseInt(values.GetValue("maxdist"));
+        
+        if(values.HasOpt("samplimit"))
+            samplimit = Integer.parseInt(values.GetValue("samplimit"));
     }
     
     public void run(){

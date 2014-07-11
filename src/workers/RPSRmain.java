@@ -5,6 +5,8 @@
 package workers;
 
 import GetCmdOpt.SimpleModeCmdLineParser;
+import modes.ClusterMode;
+import modes.PreprocessMode;
 import setWeightCover.weightCoverEvents;
 
 /**
@@ -17,39 +19,25 @@ public class RPSRmain {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        // Prepare and read command line options
+        SimpleModeCmdLineParser cmd = PrepareCMDOptions();        
+        cmd.GetAndCheckMode(args);
         
-        // Read in command line arguments; parity check
-        CommandLineParser cmd = new CommandLineParser(args);
-        if(!cmd.isComplete){
-            System.out.print(cmd.usage);
-            System.exit(0);
+        switch(cmd.CurrentMode){
+            case "cluster":
+                ClusterMode cluster = new ClusterMode(cmd);
+                cluster.run();
+                break;
+            case "preprocess":
+                PreprocessMode preprocess = new PreprocessMode(cmd);
+                preprocess.run();
+                break;
+            default:
+                System.err.println("Error! Must designate a usage mode!");
+                System.err.println(cmd.GetUsage());
+                System.exit(-1);
         }
         
-        // Read input files and place into preliminary containers
-        //readInputFiles fileParser = new readInputFiles(cmd.flatFile, cmd.gapFile, cmd.chr);
-        // TODO: implement a commandline parser argument for the buffer 
-        BufferedSetReader reader = new BufferedSetReader(cmd.flatFile, cmd.gapFile, cmd.chr, 10);
-        
-        // Create initial sets
-        //setCoverEvents initialEvents = new setCoverEvents(fileParser.PairSplit(), fileParser.Divet(), fileParser.Gaps(), fileParser.ReadNameMappings(), cmd.chr);
-        
-        // Run set weight cover to cluster sets
-        weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), cmd.chr);
-        finalEvents.calculateInitialSetStats();
-        finalEvents.run();
-        
-        // Output results
-        OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), cmd.outBase + ".vhsr.insertions");
-        insertions.WriteOut();
-        
-        OutputEvents deletions = new OutputEvents(finalEvents.RetDel(), cmd.outBase + ".vhsr.deletions");
-        deletions.WriteOut();
-        
-        OutputEvents tanddup = new OutputEvents(finalEvents.RetTand(), cmd.outBase + ".vhsr.tand");
-        tanddup.WriteOut();
-        
-        OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), cmd.outBase + ".vhsr.inversions");
-        inversions.WriteOut();
         System.exit(0);
     }
     
@@ -59,24 +47,40 @@ public class RPSRmain {
             + "Usage: java -jar RPSR.jar [mode] [mode specific options]" + nl
                 + "Modes:" + nl
                 + "\tpreprocess\tInterprets BAM files to generate metadata for \"cluster\" mode" + nl 
-                + "\tcluster\tThe mode that processes metadata generated from the main program" + nl,
+                + "\tcluster\t\tThe mode that processes metadata generated from the main program" + nl,
                 "cluster",
                 "preprocess"
         );
         
         cmd.AddMode("cluster", 
                 "RPSR cluster mode" + nl +
-                "Usage: java -jar RPSR.jar [-s filelist -c chromosome -g gap file -o output prefix] (optional: -g gmsfile list)" + nl
+                "Usage: java -jar RPSR.jar [-s filelist -c chromosome -g gap file -o output prefix] (optional: -g gmsfile list, -b buffer size)" + nl
                 + "\t-s\tFlatfile containing records from the same reads" + nl
                 + "\t-c\tChromosome to be processed" + nl
                 + "\t-g\tAssembly Gap bed file" + nl
                 + "\t-o\tOutput file prefix and directory" + nl
-                + "\t-m\tGMS file for weight rebalancing[optional]" + nl
-                + "\t-f\tFloating point value for threshold of detection [optional; default is one]" + nl,
-                "s:c:g:o:m:f:", 
+                + "\t-m\tGMS file for weight rebalancing [optional]" + nl
+                + "\t-f\tFloating point value for threshold of detection [optional; default is one]" + nl
+                + "\t-b\tNumber of pairs to hold per set; reducing this will reduce memory overhead [optional; default is 10]" + nl,
+                "s:c:g:o:m:f:b:", 
                 "scgo", 
-                "scgomf", 
-                "flatfile", "chromosome", "gapfile", "outbase", "gms", "filter");
+                "scgomfb", 
+                "flatfile", "chromosome", "gapfile", "outbase", "gms", "filter", "buffer");
+        
+        cmd.AddMode("preprocess", 
+                "RPSR preprocess mode" + nl +
+                "Usage: java -jar RPSR.jar [-i input bam -o output base name -r ref genome] (optional argugments)" + nl
+                + "\t-i\tInput BWA-aligned BAM file" + nl
+                + "\t-o\tThe base output name and directory (all output files will start with this name)" + nl
+                + "\t-r\tA MrsFAST indexed reference genome fasta file for realignment" + nl
+                + "\t-g\tFlag: states if the BAM has read groups [optional; default is 'false']" + nl
+                + "\t-t\tNumber of threads to use for preprocessing [optional; default is one thread]" + nl
+                + "\t-m\tMaximum distance between readpairs on the same chromosome [optional; default is 100000]" + nl
+                + "\t-s\tMetadata sampling limit. Reducing this will reduce memory overhead. [optional; default is 1000]" + nl, 
+                "i:o:r:g|t:m:s:", 
+                "ior", 
+                "iorgtms", 
+                "input", "output", "reference", "checkRG", "threads", "maxdist", "samplimit");
         
         return cmd;
     }
