@@ -64,17 +64,24 @@ public class PreprocessMode {
         Map<String, DivetOutputHandle> divets = metadata.generateDivetOuts(outbase);
         Map<String, SplitOutputHandle> splits = metadata.generateSplitOuts(outbase);
         
+        System.err.println("[PREPROCESS] Read input file and calculated sample thresholds.");
+        metadata.getSampleIDs().stream().forEach((s) -> {
+            System.err.println("Sample: " + s + " Avg Ins size: " + metadata.getSampleInsSize(s) +
+                    " Stdev Ins size: " + metadata.getSampleInsStd(s));
+        });
+        
         // Run through the BAM file generating split and divet data
         SAMFileReader reader = new SAMFileReader(new File(input));
-        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG);
+        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values);
         reader.iterator().forEachRemaining((s) ->{
             worker.bufferedAdd(s);
         });
         
-        worker.convertToVariant(divets, splits, values);
+        worker.convertToVariant(divets, splits);
         
+        System.err.println("[PREPROCESS] Generated initial split and divet data.");
         // Run MrsFAST on the split fastqs and generate bam files
-        MrsFastRuntimeFactory mfact = new MrsFastRuntimeFactory(threads);
+        MrsFastRuntimeFactory mfact = new MrsFastRuntimeFactory(threads, metadata.getSamFileHeader());
         mfact.ProcessSplitFastqs(splits, reference, outbase);
         Map<String, String> bams = mfact.getBams();
         

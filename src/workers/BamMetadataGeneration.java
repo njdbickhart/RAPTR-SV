@@ -36,6 +36,7 @@ public class BamMetadataGeneration {
     
     public void ScanFile(String input, int samplimit){
         SAMFileReader sam = new SAMFileReader(new File(input));
+        sam.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
         header = sam.getFileHeader();
         if(expectRG){
             
@@ -53,13 +54,18 @@ public class BamMetadataGeneration {
             else
                 rgid = "D";
             
+            int rFlags = s.getFlags();
+            // check if this is a proper pair to ensure that we dont get all zeroes!
+            if((rFlags & 0x4) == 0x4 || (rFlags & 0x8) == 0x8 || !((rFlags & 0x1) == 0x1))
+                continue;
+            
             if(!insertSizes.containsKey(rgid))
                 insertSizes.put(rgid, new ArrayList<>(samplimit));
             if(insertSizes.get(rgid).size() >= samplimit){
                 if(checkIfSamplingDone(samplimit))
                     break;
             }else
-                insertSizes.get(rgid).add(s.getInferredInsertSize());
+                insertSizes.get(rgid).add(Math.abs(s.getInferredInsertSize()));
         }
         itr.close();
         sam.close();
@@ -68,6 +74,7 @@ public class BamMetadataGeneration {
         Map<String, DivetOutputHandle> holder = new HashMap<>();
         this.rgList.stream().forEach((s) -> {
             holder.put(s, new DivetOutputHandle(outbase + "." + s + ".divet"));
+            holder.get(s).OpenHandle();
         });
         return holder;
     }
@@ -76,6 +83,7 @@ public class BamMetadataGeneration {
         Map<String, SplitOutputHandle> holder = new HashMap<>();
         this.rgList.stream().forEach((s) -> {
             holder.put(s, new SplitOutputHandle(outbase + "." + s + ".split.fq", outbase + "." + s + ".anchor.bam", header));
+            holder.get(s).OpenAnchorHandle();
         });
         return holder;
     }
@@ -83,7 +91,7 @@ public class BamMetadataGeneration {
         // First value is the lower threshold (avg - 3 std)
         // second value is the higher threshold (avg + 3 std)
         // third is the maxdist
-        Map<String, Integer[]> values = new HashMap<>();
+        Map<String, Integer[]> vs = new HashMap<>();
         this.insertSizes.keySet().stream().forEach((r) -> {
             double avg = stats.StdevAvg.IntAvg(this.insertSizes.get(r));
             double stdev = stats.StdevAvg.stdevInt(avg, this.insertSizes.get(r));
@@ -94,9 +102,9 @@ public class BamMetadataGeneration {
             if(lower < 0)
                 lower = 0;
             Integer[] v = {lower, upper, maxdist};
-            values.put(r, v);
+            vs.put(r, v);
         });
-        return values;
+        return vs;
     }
     private boolean checkIfSamplingDone(int samplimit){      
         int num = this.rgList.stream()
@@ -112,5 +120,11 @@ public class BamMetadataGeneration {
     }
     public double getSampleInsStd(String key){
         return this.values.get(key)[1];
+    }
+    public List<String> getSampleIDs(){
+        return this.rgList;
+    }
+    public SAMFileHeader getSamFileHeader(){
+        return this.header;
     }
 }

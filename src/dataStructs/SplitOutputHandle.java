@@ -44,12 +44,14 @@ public class SplitOutputHandle {
     }
     
     public void AddAnchor(String[] segs){
+        if(!fileopen)
+            this.OpenAnchorHandle();
         SAMRecord sam = recordCreator.createSAMRecord(header);
         sam.setReadName(segs[3]);
         sam.setFlags(Integer.valueOf(segs[4]));
         sam.setReferenceName(segs[5]);
         sam.setAlignmentStart(Integer.valueOf(segs[6]));
-        sam.setAlignmentEnd(Integer.valueOf(segs[6]) + segs[12].length());
+        //sam.setAlignmentEnd(Integer.valueOf(segs[6]) + segs[12].length());
         sam.setMappingQuality(Integer.valueOf(segs[7]));
         sam.setCigarString(segs[8]);
         sam.setMateReferenceName(segs[9]);
@@ -66,8 +68,8 @@ public class SplitOutputHandle {
     
     public void AddSplit(String[] segs){
         String nl = System.lineSeparator();
-        String rn1 = "@" + segs[3] + "1";
-        String rn2 = "@" + segs[3] + "2";
+        String rn1 = "@" + segs[3] + "_1";
+        String rn2 = "@" + segs[3] + "_2";
         
         int len = segs[12].length();
         
@@ -78,8 +80,8 @@ public class SplitOutputHandle {
         String tQ2 = segs[13].substring(len / 2, len);
         
         try {
-            fq1.write(rn1 + nl + tS1 + nl + "+" + tQ1 + nl);
-            fq1.write(rn2 + nl + tS2 + nl + "+" + tQ2 + nl);
+            fq1.write(rn1 + nl + tS1 + nl + "+" + nl + tQ1 + nl);
+            fq1.write(rn2 + nl + tS2 + nl + "+" + nl + tQ2 + nl);
         } catch (IOException ex) {
             Logger.getLogger(SplitOutputHandle.class.getName()).log(Level.SEVERE, null, ex);
         }

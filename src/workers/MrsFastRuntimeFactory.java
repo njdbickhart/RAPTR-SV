@@ -32,8 +32,9 @@ public class MrsFastRuntimeFactory{
     private SAMFileHeader SAMFileHeader;
     private Map<String, String> bamfiles = new HashMap<>();
     
-    public MrsFastRuntimeFactory(int numthreads){
+    public MrsFastRuntimeFactory(int numthreads, SAMFileHeader head){
         threads = numthreads;
+        SAMFileHeader = head;
     }
     
     public void ProcessSplitFastqs(Map<String, SplitOutputHandle> handles, String refgenome, String outbase){
@@ -58,8 +59,9 @@ public class MrsFastRuntimeFactory{
                 String samstr = sams.get(rg).get();
                 Runnable r = () -> {
                         SAMFileReader reader = new SAMFileReader(new File(samstr));
-                        SAMFileHeader head = reader.getFileHeader();
-                        SAMFileWriter bam = sfact.makeBAMWriter(head, false, new File(outbase + "." + rg + ".bam"));
+                        //SAMFileHeader head = reader.getFileHeader();
+                        
+                        SAMFileWriter bam = sfact.makeBAMWriter(SAMFileHeader, false, new File(outbase + "." + rg + ".bam"));
                         SAMRecordIterator itr = reader.iterator();
                         while(itr.hasNext()){
                             bam.addAlignment(itr.next());
