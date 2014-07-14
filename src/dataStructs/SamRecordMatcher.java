@@ -145,8 +145,8 @@ public class SamRecordMatcher extends TempDataClass {
                             Integer[] t = thresholds.get(lastrg);
                             SamToDivet converter = new SamToDivet(last, t[0], t[1], t[2]);
                             records.stream().forEach((r) -> {
-                                ArrayList<String[]>  others = processXAZTag(r);
-                                others.stream().forEach((n) -> {converter.addLines(n);});
+                                // Process the XAZTag if it exists
+                                processXAZTag(r).stream().forEach((n) -> {converter.addLines(n);});
                                 converter.addLines(r);
                             });
                             converter.processLinesToDivets();
@@ -172,7 +172,6 @@ public class SamRecordMatcher extends TempDataClass {
         } catch (Exception ex) {
             Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
     }
     
     private boolean isSplit(String[] segs){
