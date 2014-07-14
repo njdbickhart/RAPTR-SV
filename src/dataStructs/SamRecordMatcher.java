@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.sf.samtools.SAMReadGroupRecord;
 import net.sf.samtools.SAMRecord;
 import stats.ReadNameUtility;
@@ -142,8 +144,11 @@ public class SamRecordMatcher extends TempDataClass {
                         }else if(records.size() > 1){
                             Integer[] t = thresholds.get(lastrg);
                             SamToDivet converter = new SamToDivet(last, t[0], t[1], t[2]);
-                            for(String[] r : records)
+                            records.stream().forEach((r) -> {
+                                ArrayList<String[]>  others = processXAZTag(r);
+                                others.stream().forEach((n) -> {converter.addLines(n);});
                                 converter.addLines(r);
+                            });
                             converter.processLinesToDivets();
                             divets.get(lastrg).PrintDivetOut(converter.getDivets());
                         }
@@ -178,5 +183,52 @@ public class SamRecordMatcher extends TempDataClass {
     private boolean isAnchor(String[] segs){
         int fflags = Integer.parseInt(segs[4]);
         return (fflags & 0x8) == 0x8;
+    }
+    
+    private ArrayList<String[]> processXAZTag(String[] record){
+        ArrayList<String[]> entries = new ArrayList<>();
+        int XAZloc = hasXAZTag(record);
+        
+        // Check to see if the XA:Z tag is in the record
+        if(XAZloc > 0){
+            Pattern xaz = Pattern.compile("XA:Z:(.+)");
+            Pattern plus = Pattern.compile("([+-])(\\d+)");
+            Matcher match = xaz.matcher(record[XAZloc]);
+            if(match.find()){
+                // Each XA:Z group
+                String[] segs = match.group(1).split(";");
+                for(String s : segs){
+                    // The individual components of the XA:Z group
+                    String[] tsegs = s.split(",");
+                    String[] e = new String[record.length];
+                    System.arraycopy(record, 0, e, 0, record.length);
+                    
+                    // Check if the alignment is in the forward or reverse direction
+                    Matcher pmatch = plus.matcher(tsegs[1]);
+                    String sign, pos;
+                    if(pmatch.find()){
+                        sign = pmatch.group(1);
+                        pos = pmatch.group(2);
+                        // If the coordinate should be reversed, then subtract the read length from it
+                        if(sign.equals("-"))
+                            pos = String.valueOf(Integer.valueOf(pos) - record[12].length());
+                        
+                        e[5] = tsegs[0];
+                        e[6] = pos;
+                        // Add this alternative match to the array for return to the main program
+                        entries.add(e);
+                    }
+                }
+            }
+        }
+        return entries;
+    }
+    
+    private int hasXAZTag(String[] record){
+        for(int x = 0; x < record.length; x++){
+            if(record[x].matches("XA:Z:.+"))
+                return x;
+        }
+        return 0;
     }
 }
