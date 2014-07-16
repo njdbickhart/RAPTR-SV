@@ -96,5 +96,21 @@ public class PreprocessMode {
         }catch(IOException ex){
             ex.printStackTrace();
         }
+        
+        System.err.println("[PREPROCESS] Cleaning up temporary files...");
+        splits.keySet().stream().forEach((s) -> {
+            try{
+                Files.deleteIfExists(Paths.get(splits.get(s).fq1File()));
+            }catch(IOException ex){
+                ex.printStackTrace();
+            }
+        });
+        mfact.getSams().keySet().stream().forEach((s) -> {
+            try{
+                Files.deleteIfExists(Paths.get(s));
+            }catch(IOException ex){
+                ex.printStackTrace();
+            }
+        });
     }
 }

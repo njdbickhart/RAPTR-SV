@@ -91,8 +91,8 @@ public class SamToDivet {
                 
                 divet d = new divet(clone, fchr, fstart, fend, forient, 
                         sstart, send, sorient, 
-                        svcall, String.valueOf(fedit + sedit), String.valueOf(avgphred), 
-                        String.valueOf(sprob + fprob), String.valueOf(concordant));
+                        svcall, String.valueOf((fedit + sedit) / 2d), String.valueOf(avgphred), 
+                        String.valueOf((sprob + fprob) / 2d), String.valueOf(concordant));
                 
                 divets.add(d);
             }

@@ -297,6 +297,8 @@ public class ReadPair extends WeightedBed{
                 this.svType = callEnum.EVERSION; return;
             case "inversion" :
                 this.svType = callEnum.INVERSION; return;
+            case "transchr" :
+                this.svType = callEnum.TRANSCHR; return;
             default :
                 this.svType = callEnum.MAXDIST;            
         }

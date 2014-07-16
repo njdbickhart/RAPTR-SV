@@ -104,6 +104,8 @@ public class divet extends WeightedBed{
                 this.svType = callEnum.EVERSION; return;
             case "inversion" :
                 this.svType = callEnum.INSERTION; return;
+            case "transchr" :
+                this.svType = callEnum.TRANSCHR; return;
             default :
                 this.svType = callEnum.MAXDIST;            
         }

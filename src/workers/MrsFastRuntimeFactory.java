@@ -7,7 +7,12 @@
 package workers;
 
 import dataStructs.SplitOutputHandle;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,10 +22,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import net.sf.samtools.DefaultSAMRecordFactory;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
+import net.sf.samtools.SAMRecord;
+import net.sf.samtools.SAMRecordFactory;
 import net.sf.samtools.SAMRecordIterator;
 
 /**
@@ -29,12 +37,16 @@ import net.sf.samtools.SAMRecordIterator;
  */
 public class MrsFastRuntimeFactory{
     private final int threads;
-    private SAMFileHeader SAMFileHeader;
-    private Map<String, String> bamfiles = new HashMap<>();
+    private final SAMFileHeader FileHeader;
+    private final Map<String, String> bamfiles = new HashMap<>();
+    private final Map<String, String> samfiles = new HashMap<>();
+    
     
     public MrsFastRuntimeFactory(int numthreads, SAMFileHeader head){
         threads = numthreads;
-        SAMFileHeader = head;
+        // Setting sort order to queryname to make the clustering program's job easier
+        head.setSortOrder(SAMFileHeader.SortOrder.queryname);
+        FileHeader = head;
     }
     
     public void ProcessSplitFastqs(Map<String, SplitOutputHandle> handles, String refgenome, String outbase){
@@ -43,7 +55,7 @@ public class MrsFastRuntimeFactory{
         
         // Process the fastqs in a threaded fashion
         for(String rg : handles.keySet()){
-            MrsFastExecutable runner = new MrsFastExecutable(refgenome, handles.get(rg).fq1File(), outbase + "." + rg + ".sam");
+            MrsFastExecutable runner = new MrsFastExecutable(refgenome, handles.get(rg).fq1File(), outbase + "." + rg + ".sam", rg);
             Future<String> temp = ex.submit(runner);
             sams.put(rg, temp);
         }
@@ -52,35 +64,79 @@ public class MrsFastRuntimeFactory{
         while(!ex.isTerminated()){}
         
         // Now convert all of those sams to bams in a threaded fashion
-        ex = Executors.newFixedThreadPool(threads);
+        //ex = Executors.newFixedThreadPool(threads);
         SAMFileWriterFactory sfact = new SAMFileWriterFactory();
         for(String rg : handles.keySet()){
             try {
                 String samstr = sams.get(rg).get();
-                Runnable r = () -> {
-                        SAMFileReader reader = new SAMFileReader(new File(samstr));
+                samfiles.put(rg, samstr);
+                Runnable r = processStringsToRecords(FileHeader, outbase, rg, samstr);
+                r.run();
+                //Runnable r = () -> {
+                        
+                        //SAMFileReader reader = new SAMFileReader(new File(samstr));
                         //SAMFileHeader head = reader.getFileHeader();
                         
-                        SAMFileWriter bam = sfact.makeBAMWriter(SAMFileHeader, false, new File(outbase + "." + rg + ".bam"));
+                        /*SAMFileWriter bam = sfact.makeBAMWriter(SAMFileHeader, false, new File(outbase + "." + rg + ".bam"));
                         SAMRecordIterator itr = reader.iterator();
                         while(itr.hasNext()){
-                            bam.addAlignment(itr.next());
+                        bam.addAlignment(itr.next());
                         }
+                        itr.close();
                         reader.close();
-                        bam.close();
-                    };
+                        bam.close();*/
+                    //};
                 bamfiles.put(rg, outbase + "." + rg + ".bam");
-                ex.submit(r);
+                //ex.submit(r);
             } catch (InterruptedException | ExecutionException ex1) {
                 Logger.getLogger(MrsFastRuntimeFactory.class.getName()).log(Level.SEVERE, null, ex1);
             }
         }
         
-        ex.shutdown();
-        while(!ex.isTerminated()){}
+        //ex.shutdown();
+        //while(!ex.isTerminated()){}
+    }
+    
+    protected Runnable processStringsToRecords(SAMFileHeader header, String outbase, String rg, String samstr){
+        Runnable r = () ->{
+            SAMRecordFactory recordCreator = new DefaultSAMRecordFactory();
+            SAMFileWriterFactory sfact = new SAMFileWriterFactory();
+            SAMFileWriter bam = sfact.makeBAMWriter(header, false, new File(outbase + "." + rg + ".bam"));
+            try(BufferedReader input = Files.newBufferedReader(Paths.get(samstr), Charset.defaultCharset())){
+                String line = null;
+                while((line = input.readLine()) != null){
+                    line = line.trim();
+                    String[] segs = line.split("\t");
+                    SAMRecord sam = recordCreator.createSAMRecord(header);
+                    sam.setReadName(segs[0]);
+                    sam.setFlags(Integer.valueOf(segs[1]));
+                    sam.setReferenceName(segs[2]);
+                    sam.setAlignmentStart(Integer.valueOf(segs[3]));
+                    sam.setMappingQuality(Integer.valueOf(segs[4]));
+                    sam.setCigarString(segs[5]);
+                    sam.setMateReferenceName(segs[6]);
+                    sam.setMateAlignmentStart(Integer.valueOf(segs[7]));
+                    sam.setInferredInsertSize(Integer.valueOf(segs[8]));
+                    sam.setReadString(segs[9]);
+                    sam.setBaseQualityString(segs[10]);
+                    for(int i = 11; i < segs.length; i++){
+                        String[] tags = segs[i].split(":");
+                        sam.setAttribute(tags[0], tags[2]);
+                    }
+                    bam.addAlignment(sam);
+                }
+                bam.close();
+            }catch(IOException ex){
+                ex.printStackTrace();
+            }
+        };
+        return r;
     }
     
     public Map<String, String> getBams(){
         return this.bamfiles;
+    }
+    public Map<String, String> getSams(){
+        return this.samfiles;
     }
 }
