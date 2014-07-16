@@ -16,6 +16,7 @@ import dataStructs.splitRead;
 import file.BedMap;
 import gziputils.ReaderReturn;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -26,8 +27,10 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import net.sf.samtools.DefaultSAMRecordFactory;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
+import net.sf.samtools.SAMRecordFactory;
 import net.sf.samtools.SAMRecordIterator;
 import setWeightCover.BufferedInitialSet;
 import stats.GapOverlap;
@@ -77,15 +80,17 @@ public class BufferedSetReader {
             
             for(BedSet s : dSet.getUnsortedBedList(chr)){
                 this.sets.checkAndCombineSets((BufferedInitialSet)s);
-                    
+
             }
             int curSets = this.sets.getCountElements(chr);
             
             System.out.print("[RPSR INPUT] Read list item: " + counter + " of " + numLines
                     + "; (D , S): (" + this.divetcounter + " , " + this.splitcounter + "). Current sets: " + curSets + "\r");
         }
+        System.out.println();
         for(BedSet s : this.sets.getUnsortedBedList(chr)){
             this.finalSets.checkAndCombineSets((BufferedInitialSet)s);
+
         }
         int finSets = this.finalSets.getCountElements(chr);
         System.out.println("[RPSR INPUT] Finished loading all files! Final Sets: " + finSets + ".");
@@ -146,12 +151,16 @@ public class BufferedSetReader {
     
     private HashMap<String, ArrayList<anchorRead>> populateAnchors(FlatFile file){
         HashMap<String, ArrayList<anchorRead>> anchors = new HashMap<>();
-        BufferedReader anchorReader = ReaderReturn.openFile(file.getAnchor().toFile());
-        try{
-            String line;
+        //BufferedReader anchorReader = ReaderReturn.openFile(file.getAnchor().toFile());
+        SAMFileReader sam = new SAMFileReader(file.getAnchor().toFile());
+        sam.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        //try{
+            //String line;
+            SAMRecordIterator itr = sam.iterator();
             String[] segs;
-            while((line = anchorReader.readLine()) != null){
-                segs = line.split("\t");
+            while(itr.hasNext()){
+                SAMRecord rec = itr.next();
+                segs = rec.getSAMString().split("\t");
                 if(!(segs[2].equals(this.chr))){
                     continue;
                 }
@@ -162,9 +171,9 @@ public class BufferedSetReader {
                 
                 this.anchorMaps.addRead(clone);
             }
-        }catch(IOException ex){
-            Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        //}catch(IOException ex){
+            //Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
+        //}
         return anchors;
         //System.out.println("[VHSR INPUT] Finished loading " + this.anchors.size() + " anchor keys");
     }
@@ -192,8 +201,8 @@ public class BufferedSetReader {
                         line.getAlignmentEnd(), 
                         line.getReadName(), 
                         line.getFlags(), 
-                        line.getIntegerAttribute("NM"), 
-                        line.getStringAttribute("MD"), 
+                        (int)line.getAttribute("NM"), 
+                        String.valueOf(line.getAttribute("MD")), 
                         line.getBaseQualityString()
                 );
                 appendSplitToConstruct(sR, rn.GetCloneName(sR.Name(), line.getFlags()));                    

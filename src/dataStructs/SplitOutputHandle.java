@@ -55,13 +55,21 @@ public class SplitOutputHandle {
         sam.setMappingQuality(Integer.valueOf(segs[7]));
         sam.setCigarString(segs[8]);
         sam.setMateReferenceName(segs[9]);
-        sam.setMateAlignmentStart(Integer.valueOf(segs[10]));
+        if(segs[9].equals("*"))
+            sam.setMateAlignmentStart(0);
+        else
+            sam.setMateAlignmentStart(Integer.valueOf(segs[10]));
         sam.setInferredInsertSize(Integer.valueOf(segs[11]));
         sam.setReadString(segs[12]);
         sam.setBaseQualityString(segs[13]);
         for(int i = 14; i < segs.length; i++){
             String[] tags = segs[i].split(":");
-            sam.setAttribute(tags[0], tags[2]);
+            if(StrUtils.NumericCheck.isNumeric(tags[2]) && !tags[0].equals("MD"))
+                sam.setAttribute(tags[0], Integer.parseInt(tags[2]));
+            else if(StrUtils.NumericCheck.isFloating(tags[2]))
+                sam.setAttribute(tags[0], Float.parseFloat(tags[2]));
+            else
+                sam.setAttribute(tags[0], tags[2]);
         }
         anchorOut.addAlignment(sam);
     }

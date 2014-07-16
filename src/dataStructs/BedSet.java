@@ -108,24 +108,6 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
                     return true;
             }
         }
-        /*if((this.innerStart < b.innerEnd
-         * && this.innerEnd > b.innerStart)
-         * && svTypeConsistency(this.svType, b.getSVType())){
-         * // A disc read or balanced split that is within the read aligment regions
-         * return true;
-         * }else if((b.Start() > this.Start() && b.Start() < this.innerStart)
-         * || (b.End() > this.innerEnd && b.End() < this.end)){
-         * // Could be an unbalanced split that we want to add here
-         * if(b.getReadFlags().contains(readEnum.IsUnbalanced)
-         * && readFlagConsistency(b.getReadFlags(), b.Start(), b.End()))
-         * return true;
-         * }else if(b.getReadFlags().contains(readEnum.IsSplit)
-         * && !b.getReadFlags().contains(readEnum.IsUnbalanced)
-         * && (b.Start() > this.start && b.End() < this.end)
-         * && (b.innerStart >= this.innerStart && b.innerEnd <= this.innerEnd)){
-         * // A balanced split that is within the read alignment regions of a disc read
-         * return true;
-         * }*/
         return false;
     }
     /**
@@ -168,23 +150,6 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     /*
      * Coordinate modifiers
      */
-    private void refineBedCoords(int ... a){
-        Arrays.sort(a);
-        if(a.length == 8){
-            // Adding to previously initialized set
-            this.start = a[0];
-            this.innerStart = a[3];
-            this.innerEnd = a[4];
-            this.end = a[7];
-        }else if(a.length == 4){
-            this.start = a[0];
-            this.innerStart = a[1];
-            this.innerEnd = a[2];
-            this.end = a[3];
-        }else{
-            throw new NullPointerException("[BEDSET SORT] Array size of 4 or 8 expected!");
-        }
-    }
     
     private void refineStartCoords(int ... a){
         Arrays.sort(a);
@@ -241,9 +206,9 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         this.svType = (this.svType == null)? bedSet.svType : this.svType;
         
         bedSet.restoreAll();
-        for(ReadPair r : bedSet.pairs){
+        bedSet.pairs.stream().forEach((r) -> {
             this.bufferedAdd(r);
-        }
+        });
         bedSet.deleteTemp();
     }
     
@@ -269,14 +234,14 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
                 line = line.trim();
                 String[] segs = line.split("\t");
                 ReadPair temp = new ReadPair(segs);
-                if(temp.getReadFlags().contains(readEnum.IsSplit))
-                    this.splitSup += 1;
+                //if(temp.getReadFlags().contains(readEnum.IsSplit))
+                    //this.splitSup += 1;
                 if(temp.getReadFlags().contains(readEnum.IsUnbalanced)){
-                    this.unbalSplit += 1;
+                    //this.unbalSplit += 1;
                     this.sumUnbalSupport += (double) 1 / (double) Integer.parseInt(segs[8]);
                 }
-                if(temp.getReadFlags().contains(readEnum.IsDisc))
-                    this.divSup += 1;
+                //if(temp.getReadFlags().contains(readEnum.IsDisc))
+                    //this.divSup += 1;
                 this.readNames.put(segs[0], Integer.parseInt(segs[8]));
             }
         }catch(IOException ex){
@@ -323,6 +288,20 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         }
         this.chr = working.Chr();
         this.svType = (this.svType == null)? working.svType : this.svType;
+        if(working.getReadFlags().contains(readEnum.IsDisc)){
+            if(this.divSup == -1)
+                divSup = 0;
+            divSup++;
+        }else if(working.getReadFlags().contains(readEnum.IsSplit)){
+            if(this.splitSup == -1)
+                splitSup = 0;
+            splitSup++;
+        }else if(working.getReadFlags().contains(readEnum.IsUnbalanced)){
+            if(this.unbalSplit == -1)
+                unbalSplit = 0;
+            unbalSplit++;
+        }
+            
         this.pairs.add(working);
     }
     
@@ -370,9 +349,12 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      */
     public void preliminarySetCalcs(){
         
-        this.splitSup = 0;
-        this.divSup = 0;
-        this.unbalSplit = 0;
+        if(this.splitSup == -1)
+            this.splitSup = 0;
+        if(this.divSup == -1)
+            this.divSup = 0;
+        if(this.unbalSplit == -1)
+            this.unbalSplit = 0;
         this.readSequentialFile();
         
     }
@@ -460,5 +442,13 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
             names.add(r.Name());
         }
         return names;
+    }
+    
+    /**
+     * Debugging method
+     * @return 
+     */
+    public boolean hasSplitUnbalSupport(){
+        return this.splitSup > 0 || this.unbalSplit > 0;
     }
 }

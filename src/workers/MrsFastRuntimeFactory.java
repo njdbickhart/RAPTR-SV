@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -24,12 +23,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sf.samtools.DefaultSAMRecordFactory;
 import net.sf.samtools.SAMFileHeader;
-import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordFactory;
-import net.sf.samtools.SAMRecordIterator;
 
 /**
  * This program runs MrsFAST and returns the output BAM file name
@@ -121,7 +118,12 @@ public class MrsFastRuntimeFactory{
                     sam.setBaseQualityString(segs[10]);
                     for(int i = 11; i < segs.length; i++){
                         String[] tags = segs[i].split(":");
-                        sam.setAttribute(tags[0], tags[2]);
+                        if(StrUtils.NumericCheck.isNumeric(tags[2]) && !tags[0].equals("MD"))
+                            sam.setAttribute(tags[0], Integer.parseInt(tags[2]));
+                        else if(StrUtils.NumericCheck.isFloating(tags[2]))
+                            sam.setAttribute(tags[0], Float.parseFloat(tags[2]));
+                        else
+                            sam.setAttribute(tags[0], tags[2]);
                     }
                     bam.addAlignment(sam);
                 }

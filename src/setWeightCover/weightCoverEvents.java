@@ -42,9 +42,9 @@ public class weightCoverEvents{
     
     public void calculateInitialSetStats(){
         System.out.println("[RPSR WEIGHT] Calculating preliminary set values.");
-        for(BufferedInitialSet s : this.inputSets){
+        this.inputSets.stream().forEach((s) -> {
             s.preliminarySetCalcs();
-        }
+        });
     }
     
     public void run() {
@@ -59,6 +59,9 @@ public class weightCoverEvents{
                 coordsorted.add(new CoordTree(s));
             }
             s.reCalculateValues(names);
+            if(s.hasSplitUnbalSupport()){
+                System.out.println("hey");
+            }
         }
         //SortWeightMap supportSort = new SortWeightMap();
         int initialSize = this.inputSets.size();
@@ -104,11 +107,14 @@ public class weightCoverEvents{
             }
             
             ArrayList<BufferedInitialSet> toRemove = new ArrayList<>();
+            this.inputSets.get(0).closeTemp('A');
             this.inputSets.remove(0);
             removal++;
             for(int i = 0; i < this.inputSets.size(); i++){
                 this.inputSets.get(i).reCalculateValues(names);
+                // Removes all sets that have less than 1 supporting read (and mapping quality)
                 if(this.inputSets.get(i).sumFullSupport <= 1d){
+                    this.inputSets.get(i).closeTemp('A');
                     toRemove.add(this.inputSets.get(i));
                     removal++;
                 }
