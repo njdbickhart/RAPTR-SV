@@ -160,11 +160,15 @@ public class SamRecordMatcher extends TempDataClass {
                 last = segs[1];
                 lastrg = segs[0];
             }
-            for(String s : divets.keySet()){
+            divets.keySet().stream().map((s) -> {
                 divets.get(s).CloseHandle();
+                return s;
+            }).map((s) -> {
                 splits.get(s).CloseAnchorHandle();
+                return s;
+            }).forEach((s) -> {
                 splits.get(s).CloseFQHandle();
-            }
+            });
             input.close();
             sort.waitFor();
         } catch (IOException | InterruptedException ex) {
