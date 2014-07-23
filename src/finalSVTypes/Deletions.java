@@ -15,8 +15,8 @@ import setWeightCover.finalSets;
  */
 public class Deletions extends finalSets{
     
-    public Deletions(BufferedInitialSet a, HashSet<String> names){
-        super.initialize(a, names);
+    public Deletions(BufferedInitialSet a, HashSet<String> names, boolean debug){
+        super.initialize(a, names, debug);
         this.svType = callEnum.DELETION;
     }
 }

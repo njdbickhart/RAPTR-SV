@@ -16,8 +16,8 @@ import setWeightCover.finalSets;
  */
 public class TandDup extends finalSets{
     
-    public TandDup(BufferedInitialSet a, HashSet<String> names){
-        super.initialize(a, names);
+    public TandDup(BufferedInitialSet a, HashSet<String> names, boolean debug){
+        super.initialize(a, names, debug);
         this.svType = callEnum.TANDEM;
     }
     

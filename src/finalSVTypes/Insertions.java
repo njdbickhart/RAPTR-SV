@@ -16,8 +16,8 @@ import setWeightCover.finalSets;
  */
 public class Insertions extends finalSets{
     
-    public Insertions(BufferedInitialSet a, HashSet<String> names){
-        super.initialize(a, names);
+    public Insertions(BufferedInitialSet a, HashSet<String> names, boolean debug){
+        super.initialize(a, names, debug);
         this.svType = callEnum.INSERTION;
     }
 }

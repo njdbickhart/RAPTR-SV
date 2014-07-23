@@ -19,17 +19,17 @@ public class Inversions extends finalSets{
     private finalSets ReverseSupport;
     private boolean complete = false;
     
-    public Inversions(BufferedInitialSet a, HashSet<String> names){
+    public Inversions(BufferedInitialSet a, HashSet<String> names, boolean debug){
         // Inversions are strange, since they require evidence on both ends in order to be confirmed
         // I need to find a supporting inversion call downstream of my leftmost coordinate before completing the set
         // Unbalanced inversions will still be reported, but will be untrustworthy
         this.chr = a.Chr();
-        this.ForwardSupport = new InversionSet(a, names);
+        this.ForwardSupport = new InversionSet(a, names, debug);
     }
     
     private class InversionSet extends finalSets{
-        public InversionSet(BufferedInitialSet a, HashSet<String> names){
-            super.initialize(a, names);
+        public InversionSet(BufferedInitialSet a, HashSet<String> names, boolean debug){
+            super.initialize(a, names, debug);
         }
         
     }
@@ -39,8 +39,8 @@ public class Inversions extends finalSets{
             FinalizeValues(false);
         }
     }
-    public void AddReverseSupport(BufferedInitialSet a, HashSet<String> names){
-        this.ReverseSupport = new InversionSet(a, names);
+    public void AddReverseSupport(BufferedInitialSet a, HashSet<String> names, boolean debug){
+        this.ReverseSupport = new InversionSet(a, names, debug);
         this.complete = true;
         FinalizeValues(true);
     }

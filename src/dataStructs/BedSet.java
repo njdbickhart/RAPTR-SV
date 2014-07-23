@@ -438,9 +438,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      */
     public ArrayList<String> getReadNames(){
         ArrayList<String> names = new ArrayList<>();
-        for(ReadPair r : this.pairs){
-            names.add(r.Name());
-        }
+        this.readNames.keySet().stream().forEach((s) -> names.add(s));
         return names;
     }
     

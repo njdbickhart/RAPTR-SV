@@ -7,7 +7,6 @@
 package modes;
 
 import GetCmdOpt.SimpleModeCmdLineParser;
-import java.util.HashMap;
 import setWeightCover.weightCoverEvents;
 import workers.BufferedSetReader;
 import workers.OutputEvents;
@@ -22,6 +21,7 @@ public class ClusterMode {
     private final String chr;
     private final String gapFile;
     private final String outBase;
+    private final boolean debug;
     private int buffer = 10;
     
     public ClusterMode(SimpleModeCmdLineParser values){
@@ -31,6 +31,7 @@ public class ClusterMode {
         outBase = values.GetValue("outbase");
         if(values.HasOpt("buffer"))
             buffer = Integer.parseInt(values.GetValue("buffer"));
+        debug = values.HasOpt("debug");
     }
     
     public void run(){
@@ -39,18 +40,19 @@ public class ClusterMode {
         BufferedSetReader reader = new BufferedSetReader(flatFile, gapFile, chr, buffer);
         
         // Run set weight cover to cluster sets
-        weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), chr);
+        weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), chr, debug);
         finalEvents.calculateInitialSetStats();
+        
         finalEvents.run();
         
         // Output results
-        OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), outBase + ".vhsr.insertions");
+        OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), outBase + ".vhsr.insertions", debug);
         insertions.WriteOut();
         
-        OutputEvents deletions = new OutputEvents(finalEvents.RetDel(), outBase + ".vhsr.deletions");
+        OutputEvents deletions = new OutputEvents(finalEvents.RetDel(), outBase + ".vhsr.deletions", debug);
         deletions.WriteOut();
         
-        OutputEvents tanddup = new OutputEvents(finalEvents.RetTand(), outBase + ".vhsr.tand");
+        OutputEvents tanddup = new OutputEvents(finalEvents.RetTand(), outBase + ".vhsr.tand", debug);
         tanddup.WriteOut();
         
         OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), outBase + ".vhsr.inversions");

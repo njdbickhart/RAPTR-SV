@@ -9,11 +9,9 @@ import dataStructs.callEnum;
 import file.BedAbstract;
 import finalSVTypes.*;
 import java.util.ArrayList;
-import stats.SortWeightMap;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.List;
 
 
 /**
@@ -21,15 +19,16 @@ import java.util.List;
  * @author derek.bickhart
  */
 public class weightCoverEvents{
-    private ArrayList<BufferedInitialSet> inputSets;
-    private String chr;
-    private ArrayList<Inversions> inversions;
-    private ArrayList<TandDup> tandup;
-    private ArrayList<Deletions> deletions;
-    private ArrayList<Insertions> insertions;
-    private HashSet<String> names;
+    private final ArrayList<BufferedInitialSet> inputSets;
+    private final String chr;
+    private final ArrayList<Inversions> inversions;
+    private final ArrayList<TandDup> tandup;
+    private final ArrayList<Deletions> deletions;
+    private final ArrayList<Insertions> insertions;
+    private final HashSet<String> names;
+    private final boolean debugmode;
     
-    public weightCoverEvents(SetMap sets, String chr){
+    public weightCoverEvents(SetMap sets, String chr, boolean debug){
         this.inputSets = sets.getUnsortedBedList(chr);
         this.chr = chr;
         this.inversions = new ArrayList<>();
@@ -37,7 +36,7 @@ public class weightCoverEvents{
         this.deletions = new ArrayList<>();
         this.insertions = new ArrayList<>();
         this.names = new HashSet<>();
- 
+        debugmode = debug;
     }
     
     public void calculateInitialSetStats(){
@@ -132,18 +131,18 @@ public class weightCoverEvents{
     }
     
     private void ProcessTanDup(BufferedInitialSet a){
-        this.tandup.add(new TandDup(a, names));
+        this.tandup.add(new TandDup(a, names, debugmode));
     }
     private void ProcessDel(BufferedInitialSet a){
-        this.deletions.add(new Deletions(a, names));
+        this.deletions.add(new Deletions(a, names, debugmode));
     }
     private void ProcessIns(BufferedInitialSet a){
-        this.insertions.add(new Insertions(a, names));
+        this.insertions.add(new Insertions(a, names, debugmode));
     }
     private void ProcessInv(BufferedInitialSet a, ArrayList<CoordTree> coords){
         // Find the starting coordinate for the inversion in the coord sorted array
         int initialCoord = 0;
-        Inversions temp = new Inversions(a, names);
+        Inversions temp = new Inversions(a, names, debugmode);
         for(int i = 0; i < coords.size(); i++){
             if(coords.get(i).Start() == a.Start()){
                 initialCoord = i;
@@ -157,7 +156,7 @@ public class weightCoverEvents{
             if(coords.get(i).Start() > a.Start() + 100000){
                 break;
             }else if(coords.get(i).Start() < a.Start() + 100000){
-                temp.AddReverseSupport(coords.get(i).RetReference(), names);
+                temp.AddReverseSupport(coords.get(i).RetReference(), names, debugmode);
                 found = true;
                 break;
             }

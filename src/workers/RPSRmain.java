@@ -62,10 +62,10 @@ public class RPSRmain {
                 + "\t-m\tGMS file for weight rebalancing [optional]" + nl
                 + "\t-f\tFloating point value for threshold of detection [optional; default is one]" + nl
                 + "\t-b\tNumber of pairs to hold per set; reducing this will reduce memory overhead [optional; default is 10]" + nl,
-                "s:c:g:o:m:f:b:", 
+                "s:c:g:o:m:f:b:d|", 
                 "scgo", 
-                "scgomfb", 
-                "flatfile", "chromosome", "gapfile", "outbase", "gms", "filter", "buffer");
+                "scgomfbd", 
+                "flatfile", "chromosome", "gapfile", "outbase", "gms", "filter", "buffer", "debug");
         
         cmd.AddMode("preprocess", 
                 "RPSR preprocess mode" + nl +

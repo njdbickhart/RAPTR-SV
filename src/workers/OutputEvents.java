@@ -23,10 +23,14 @@ import setWeightCover.finalSets;
 public class OutputEvents {
     protected ArrayList<finalSets> sets;
     protected Path outfile;
+    protected Path supportfile;
+    protected final boolean debug;
     
-    public OutputEvents(ArrayList<? extends finalSets> sets, String outfile){
+    public OutputEvents(ArrayList<? extends finalSets> sets, String outfile, boolean debug){
         this.sets = (ArrayList<finalSets>) sets;
         this.outfile = Paths.get(outfile);
+        this.supportfile = Paths.get(outfile + ".sup");
+        this.debug = debug;
     }
     
     public void WriteOut (){
@@ -38,9 +42,22 @@ public class OutputEvents {
                         String.valueOf(event.DiscSupport()), String.valueOf(event.SplitSupport()), String.valueOf(event.UnbalancedSplitSupport()),
                         String.valueOf(event.SumFullSupport()));
                 output.write(outLine);
+                //output.newLine();
             }
         } catch (IOException ex) {
             Logger.getLogger(OutputEvents.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        if(debug){
+            try(BufferedWriter support = Files.newBufferedWriter(supportfile, Charset.defaultCharset())){
+                for(finalSets event : this.sets){
+                    
+                    support.write(event.getSupportReadStr());
+                    support.newLine();
+                }
+            }catch(IOException ex){
+                Logger.getLogger(OutputEvents.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     protected String join (String ... t){

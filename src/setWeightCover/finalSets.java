@@ -4,17 +4,10 @@
  */
 package setWeightCover;
 
+import StrUtils.StrArray;
 import dataStructs.callEnum;
-import dataStructs.divet;
-import dataStructs.pairSplit;
 import file.BedAbstract;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.logging.Level;
-import stats.MergerUtils;
-import stats.SortWeightMap;
 
 /**
  *
@@ -31,9 +24,11 @@ public abstract class finalSets extends BedAbstract{
     protected BufferedInitialSet supportingReads;
     public callEnum svType;
     
-    public void initialize(BufferedInitialSet a, HashSet<String> names){
+    public void initialize(BufferedInitialSet a, HashSet<String> names, boolean debug){
         this.chr = a.Chr();
         //refineMapsRemainingReads(a);
+        if(debug)
+            supportingReads = a;
         setMapData(a, names);
     }
     private void setMapData(BufferedInitialSet a, HashSet<String> names){
@@ -49,7 +44,15 @@ public abstract class finalSets extends BedAbstract{
         names.addAll(a.getReadNames());
     }
     
-    
+    public String getSupportReadStr(){
+        BufferedInitialSet a = supportingReads;
+        a.restoreAll();
+        String[] values = {a.Chr(), String.valueOf(a.Start()), String.valueOf(a.innerStart),
+        String.valueOf(a.innerEnd), String.valueOf(a.End()), svType.toString(),
+        String.valueOf(this.discSupport), String.valueOf(this.splitSupport),
+        String.valueOf(this.unbalancedSplitSupport), StrArray.Join(a.getReadNames(), ";")};        
+        return StrArray.Join(values, "\t");
+    }
     
     @Override
     public int compareTo(BedAbstract t) {
