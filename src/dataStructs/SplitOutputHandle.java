@@ -12,7 +12,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sf.samtools.DefaultSAMRecordFactory;
@@ -72,6 +71,10 @@ public class SplitOutputHandle {
                 sam.setAttribute(tags[0], tags[2]);
         }
         anchorOut.addAlignment(sam);
+    }
+    
+    public void AddAnchor(SAMRecord s){
+        anchorOut.addAlignment(s);
     }
     
     public void AddSplit(String[] segs){

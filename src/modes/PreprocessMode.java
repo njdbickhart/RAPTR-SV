@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.Map;
 import net.sf.samtools.SAMFileReader;
 import workers.BamMetadataGeneration;
@@ -34,6 +33,7 @@ public class PreprocessMode {
     private final String input;
     private int threads = 1;
     private final String reference;
+    private final boolean debug;
     
     public PreprocessMode(SimpleModeCmdLineParser values){
         outbase = values.GetValue("output");
@@ -53,6 +53,8 @@ public class PreprocessMode {
         
         if(values.HasOpt("samplimit"))
             samplimit = Integer.parseInt(values.GetValue("samplimit"));
+        
+        debug = values.HasOpt("debug");
     }
     
     public void run(){
@@ -72,12 +74,14 @@ public class PreprocessMode {
         
         // Run through the BAM file generating split and divet data
         SAMFileReader reader = new SAMFileReader(new File(input));
-        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values);
+        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
         reader.iterator().forEachRemaining((s) ->{
             worker.bufferedAdd(s);
         });
         
         worker.convertToVariant(divets, splits);
+        reader = new SAMFileReader(new File(input));
+        worker.RetrieveMissingAnchors(splits, reader.iterator());
         
         System.err.println("[PREPROCESS] Generated initial split and divet data.");
         // Run MrsFAST on the split fastqs and generate bam files

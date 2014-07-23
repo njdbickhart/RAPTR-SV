@@ -8,15 +8,12 @@ import dataStructs.BedSet;
 import dataStructs.ReadPair;
 import dataStructs.SetMap;
 import dataStructs.anchorRead;
-import dataStructs.divet;
 import dataStructs.pairSplit;
 import dataStructs.readEnum;
 import dataStructs.readNameMappings;
 import dataStructs.splitRead;
-import file.BedMap;
 import gziputils.ReaderReturn;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -27,10 +24,8 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import net.sf.samtools.DefaultSAMRecordFactory;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMRecordFactory;
 import net.sf.samtools.SAMRecordIterator;
 import setWeightCover.BufferedInitialSet;
 import stats.GapOverlap;
@@ -41,20 +36,20 @@ import stats.ReadNameUtility;
  * @author bickhart
  */
 public class BufferedSetReader {
-    private String chr;
-    private int buffer;
+    private final String chr;
+    private final int buffer;
     
-    private ArrayList<FlatFile> fileEntries = new ArrayList<>();
-    private SetMap<BufferedInitialSet> sets = new SetMap<>();
-    private SetMap<BufferedInitialSet> finalSets = new SetMap<>();
+    private final ArrayList<FlatFile> fileEntries = new ArrayList<>();
+    private final SetMap<BufferedInitialSet> sets = new SetMap<>();
+    private final SetMap<BufferedInitialSet> finalSets = new SetMap<>();
     
     private int splitcounter = 0;
     private int divetcounter = 0;
-    private HashMap<String, ArrayList<splitRead>> soleSplits = new HashMap<>();
+    private final HashMap<String, ArrayList<splitRead>> soleSplits = new HashMap<>();
     //private HashMap<String, ArrayList<anchorRead>> anchors;
-    private readNameMappings anchorMaps = new readNameMappings();
+    private final readNameMappings anchorMaps = new readNameMappings();
     private GapOverlap gaps;
-    private ReadNameUtility rn = new ReadNameUtility();
+    private final ReadNameUtility rn = new ReadNameUtility();
     
     public BufferedSetReader(String flatFile, String gapFile, String chr, int buffer){
         // First, let's load the data file locations and create the gap intersection
@@ -120,10 +115,7 @@ public class BufferedSetReader {
                 if(!(segs[1].equals(this.chr))){
                     continue;
                 }
-                if(segs[12].equals("1")){
-                    //The divet has a perfect concordant read, so this pair should be ignored
-                    continue;
-                }else{
+                if(!segs[12].equals("1") && Double.valueOf(segs[11]) > 0.001){
                     ReadPair rp = new ReadPair(line, file, readEnum.IsDisc);
                     tempholder.add(rp);
                 }

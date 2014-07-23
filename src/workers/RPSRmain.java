@@ -77,10 +77,10 @@ public class RPSRmain {
                 + "\t-t\tNumber of threads to use for preprocessing [optional; default is one thread]" + nl
                 + "\t-m\tMaximum distance between readpairs on the same chromosome [optional; default is 100000]" + nl
                 + "\t-s\tMetadata sampling limit. Reducing this will reduce memory overhead. [optional; default is 1000]" + nl, 
-                "i:o:r:g|t:m:s:", 
+                "i:o:r:g|t:m:s:d|", 
                 "ior", 
-                "iorgtms", 
-                "input", "output", "reference", "checkRG", "threads", "maxdist", "samplimit");
+                "iorgtmsd", 
+                "input", "output", "reference", "checkRG", "threads", "maxdist", "samplimit", "debug");
         
         return cmd;
     }
