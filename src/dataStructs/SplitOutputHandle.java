@@ -14,12 +14,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import net.sf.samtools.CigarElement;
+import net.sf.samtools.CigarOperator;
 import net.sf.samtools.DefaultSAMRecordFactory;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordFactory;
+import net.sf.samtools.TextCigarCodec;
 
 /**
  *
@@ -34,6 +37,7 @@ public class SplitOutputHandle {
     private SAMFileWriter anchorOut;
     private final SAMFileHeader header;
     private boolean fileopen = false;
+    private TextCigarCodec cd = TextCigarCodec.getSingleton();
     
     public SplitOutputHandle(String file, String file2, SAMFileHeader sam){
         fq1path = Paths.get(file);
@@ -74,6 +78,8 @@ public class SplitOutputHandle {
     }
     
     public void AddAnchor(SAMRecord s){
+        if(!fileopen)
+            this.OpenAnchorHandle();
         anchorOut.addAlignment(s);
     }
     
@@ -83,12 +89,13 @@ public class SplitOutputHandle {
         String rn2 = "@" + segs[3] + "_2";
         
         int len = segs[12].length();
+        int splitter = firstSplitSeg(segs[8], len);
         
-        String tS1 = segs[12].substring(0, len / 2);
-        String tS2 = segs[12].substring(len / 2, len);
+        String tS1 = segs[12].substring(0, splitter);
+        String tS2 = segs[12].substring(splitter, len);
 
-        String tQ1 = segs[13].substring(0, len / 2);
-        String tQ2 = segs[13].substring(len / 2, len);
+        String tQ1 = segs[13].substring(0, splitter);
+        String tQ2 = segs[13].substring(splitter, len);
         
         try {
             fq1.write(rn1 + nl + tS1 + nl + "+" + nl + tQ1 + nl);
@@ -96,6 +103,22 @@ public class SplitOutputHandle {
         } catch (IOException ex) {
             Logger.getLogger(SplitOutputHandle.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    private int firstSplitSeg(String cigar, int readlen){
+        int start = 0;
+        for(CigarElement e : cd.decode(cigar).getCigarElements()){
+            if(e.getOperator().equals(CigarOperator.S) && e.getLength() > readlen * 0.20){
+                if (start == 0)
+                    return e.getLength(); // We have a softclip area at the beginning
+                else if(start + e.getLength() >= readlen * 0.90)
+                    return start; // This softclipping is at the end
+                else
+                    return start + e.getLength();
+            }else 
+                start += e.getLength();
+        }
+        return readlen / 2; // We couldn't find a good softclip, so let's just return half the read length
     }
     
     private void OpenFQHandle(){

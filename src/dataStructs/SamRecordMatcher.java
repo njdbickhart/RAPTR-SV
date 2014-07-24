@@ -19,10 +19,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
@@ -78,14 +80,10 @@ public class SamRecordMatcher extends TempDataClass {
         Integer[] t = this.thresholds.get(r.getId());
         int insert = Math.abs(a.getInferredInsertSize());
         int softclips = 0;
-        if(a.getCigarString().matches("S"))
+        if(a.getCigarString().contains("S"))
             softclips = this.getCigarSoftClips(a.getCigar());
         
         double softthresh = (double)a.getReadLength() * 0.20d;
-        if(softclips > softthresh)
-            System.err.println("Softclipped: " + softclips + "\t" + softthresh + "\t" + a.getSAMString());
-        if(softclips > 10)
-            System.err.println("Softclip thresh tripped: " + softclips + "\t" + a.getCigar().getCigarElements().toString());
         if((rgflags & 0x1) == 0x1)
             if(insert > t[0] && insert < t[1] && softclips < softthresh)
                 return; // This entry was properly mated and was not discordant; we don't need it
@@ -156,11 +154,13 @@ public class SamRecordMatcher extends TempDataClass {
                 // clone name is not the same as the last one
                 if(!segs[1].equals(last)){
                     if(!records.isEmpty()){
-                        if(this.isSplit(lastsegs)){
+                        if(records.stream().anyMatch((s) -> isSplit(s))){
                             int scount = 0, acount = 0;
                             for(String[] r : records){
                                 if(this.isAnchor(r)){
                                     splits.get(lastrg).AddAnchor(r);
+                                    if(r[1].equals("chr29-30796179-30796718-2:1:0-4:0:0-692a3"))
+                                        System.err.println("Anchor: " + StrUtils.StrArray.Join(r, "\t"));
                                     if(debug)
                                         this.debugWriter.write("Anchor\t" + StrUtils.StrArray.Join(r, "\t") + System.lineSeparator());
                                     acount++;
@@ -172,9 +172,12 @@ public class SamRecordMatcher extends TempDataClass {
                                 }
                             }
                             if(acount == 0 && scount > 0){
-                                if(!anchorlookup.containsKey(segs[0]))
-                                    anchorlookup.put(segs[0], new HashMap<String, Short>());
-                                anchorlookup.get(segs[0]).put(segs[1], this.flipCloneNum(Short.parseShort(segs[2])));
+                                // We had more than one split read, but no anchors
+                                // Store the information we need to get the anchors next round
+                                String[] temp = records.get(0);
+                                if(!anchorlookup.containsKey(temp[0]))
+                                    anchorlookup.put(temp[0], new HashMap<>());
+                                anchorlookup.get(temp[0]).put(temp[1], this.flipCloneNum(Short.parseShort(temp[2])));
                             }
                         }else if(records.size() > 1){
                             Integer[] t = thresholds.get(lastrg);
@@ -221,7 +224,13 @@ public class SamRecordMatcher extends TempDataClass {
     
     public void RetrieveMissingAnchors(Map<String, SplitOutputHandle> splits, SAMRecordIterator samItr){
         if(!this.anchorlookup.isEmpty()){
-            System.err.println("[RECORD MATCHER] Identified " + this.anchorlookup.keySet().size() + " soft clipped reads that need anchors identified.");
+            int anchorcount = this.anchorlookup.keySet().stream().map((s) -> anchorlookup.get(s).keySet().size()).reduce(0,Integer::sum);
+            System.err.println("[RECORD MATCHER] Identified " + anchorcount + " soft clipped reads that need anchors identified.");
+            Map<String, Boolean> anchorfound = anchorlookup.keySet()
+                    .stream()
+                    .flatMap(s -> anchorlookup.get(s).keySet().stream())
+                    .collect(Collectors.toMap((s) -> s, (s) -> false));
+            
             samItr.forEachRemaining((s) -> {
                 SAMReadGroupRecord r;
                 if(this.checkRGs)
@@ -234,11 +243,17 @@ public class SamRecordMatcher extends TempDataClass {
                     if(this.anchorlookup.get(rg).containsKey(clone)){
                         short num = rn.GetCloneNum(s.getReadName(), s.getFlags());
                         if(this.anchorlookup.get(rg).get(clone) == num){
+                            if(clone.equals("chr29-30796179-30796718-2:1:0-4:0:0-692a3"))
+                                System.err.println("Retrieved Anchor: " + s.getSAMString().trim());
                             splits.get(rg).AddAnchor(s);
+                            anchorfound.put(clone, true);
                         }
                     }
                 }
             });
+            long found = anchorfound.keySet().stream().filter((e) -> anchorfound.get(e)).count();
+            long notfound = (long)anchorfound.size() - found;
+            System.err.println("[RECORD MATCHER] Collected: " + found + " anchor reads and missed " + notfound + " out of " + anchorfound.size() + " original values");
         }
         samItr.close();
         // We close the anchor handle here just in case there were additional anchor entries to add.
@@ -252,9 +267,10 @@ public class SamRecordMatcher extends TempDataClass {
             return 1;
     }
     
-    /*
-    TODO fix this to make sure that it is giving the proper softclip ammount
-    */
+    private boolean isOverSoftClipThreshold(Cigar c, int readLength){
+        return getCigarSoftClips(c) > readLength * 0.20d;
+    }
+    
     private int getCigarSoftClips(Cigar c){
         return c.getCigarElements()
                 .stream()
@@ -265,13 +281,13 @@ public class SamRecordMatcher extends TempDataClass {
     private boolean isSplit(String[] segs){
         int fflags = Integer.parseInt(segs[4]);
         Cigar c = TextCigarCodec.getSingleton().decode(segs[8]);
-        int sclips = getCigarSoftClips(c);
-        return (fflags & 0x8) == 0x8 || (fflags & 0x4) == 0x4 || sclips > 4;
+        return (fflags & 0x8) == 0x8 || (fflags & 0x4) == 0x4 || isOverSoftClipThreshold(c, segs[12].length());
     }
     
     private boolean isAnchor(String[] segs){
         int fflags = Integer.parseInt(segs[4]);
-        return (fflags & 0x8) == 0x8 && !segs[5].equals("*");
+        Cigar c = TextCigarCodec.getSingleton().decode(segs[8]);
+        return (fflags & 0x4) != 0x4 && (fflags & 0x8) == 0x8 && !segs[5].equals("*") && !isOverSoftClipThreshold(c, segs[12].length());
     }
     
     private ArrayList<String[]> processXAZTag(String[] record){

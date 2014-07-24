@@ -51,7 +51,8 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
     
     private boolean setOverlaps(T a, T b){
         if((a.innerStart < b.innerEnd
-                && a.innerEnd > b.innerStart)){
+                && a.innerEnd > b.innerStart)
+                && svTypeConsistency(a.svType, b.svType)){
             return true;
         }
         return false;
@@ -74,5 +75,19 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
             }
         }
         return c;
+    }
+    
+    protected boolean svTypeConsistency(Enum<callEnum> a, Enum<callEnum> b){
+        if(a.equals(b)){
+            return true;
+        }else if ((a.equals(callEnum.DELETION) && b.equals(callEnum.DELINV))
+                || (a.equals(callEnum.DELINV) && b.equals(callEnum.DELETION))
+                || (a.equals(callEnum.INSERTION) && b.equals(callEnum.INSINV))
+                || (a.equals(callEnum.INSINV) && b.equals(callEnum.INSERTION))
+                || (a.equals(callEnum.EVERSION) && b.equals(callEnum.TANDEM))
+                || (a.equals(callEnum.TANDEM) && b.equals(callEnum.EVERSION))){
+            return true;
+        }
+        return false;
     }
 }

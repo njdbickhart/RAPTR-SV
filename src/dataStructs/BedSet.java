@@ -85,10 +85,10 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      */
     public boolean pairOverlaps(ReadPair b){
         if(b.getReadFlags().contains(readEnum.IsDisc)){
-            if((this.start <= b.getInnerStart() && this.innerEnd >= b.Start())
-                    && (this.innerEnd <= b.End() && this.End() <= b.End())
-                    && !this.makesReadRegionTooLong(start, innerStart, b.Start(), b.getInnerStart(), this.innerEnd - this.innerStart)
-                    && !this.makesReadRegionTooLong(innerEnd, end, b.getInnerEnd(), b.End(), this.innerEnd - this.innerStart)
+            if((this.start <= b.getInnerStart() && this.innerStart >= b.Start())
+                    && (this.innerEnd <= b.End() && this.End() >= b.getInnerEnd())
+                    //&& !this.makesReadRegionTooLong(start, innerStart, b.Start(), b.getInnerStart(), this.innerEnd - this.innerStart)
+                    //&& !this.makesReadRegionTooLong(innerEnd, end, b.getInnerEnd(), b.End(), this.innerEnd - this.innerStart)
                     && svTypeConsistency(this.svType, b.getSVType())){
                 // Discordant read overlap
                 return true;
@@ -157,7 +157,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     private boolean makesReadRegionTooLong(int s1, int s2, int e1, int e2, int insert){
         int[] i = {s1, s2, e1, e2};
         Arrays.sort(i);
-        return (i[3] - i[0] > insert);
+        return (i[3] - i[0] > insert * 10);
     }
     
     private void refineStartCoords(int ... a){

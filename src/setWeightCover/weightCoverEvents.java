@@ -58,9 +58,6 @@ public class weightCoverEvents{
                 coordsorted.add(new CoordTree(s));
             }
             s.reCalculateValues(names);
-            if(s.hasSplitUnbalSupport()){
-                System.out.println("hey");
-            }
         }
         //SortWeightMap supportSort = new SortWeightMap();
         int initialSize = this.inputSets.size();

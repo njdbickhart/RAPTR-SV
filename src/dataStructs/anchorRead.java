@@ -24,11 +24,7 @@ public class anchorRead extends BedAbstract{
         } catch (BedFileException ex) {
             Logger.getLogger(anchorRead.class.getName()).log(Level.SEVERE, null, ex);
         }
-        if(samFlag.equals("16")){
-            this.forward = false;
-        }else{
-            this.forward = true;
-        }
+        this.forward = !samFlag.equals("16");
         String[] mm = mmTag.split(":");
         calcProbs(qual, mm[2]);
     }
