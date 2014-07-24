@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.sf.samtools.Cigar;
+import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMReadGroupRecord;
 import net.sf.samtools.SAMRecord;
@@ -80,9 +81,13 @@ public class SamRecordMatcher extends TempDataClass {
         if(a.getCigarString().matches("S"))
             softclips = this.getCigarSoftClips(a.getCigar());
         
-        
+        double softthresh = (double)a.getReadLength() * 0.20d;
+        if(softclips > softthresh)
+            System.err.println("Softclipped: " + softclips + "\t" + softthresh + "\t" + a.getSAMString());
+        if(softclips > 10)
+            System.err.println("Softclip thresh tripped: " + softclips + "\t" + a.getCigar().getCigarElements().toString());
         if((rgflags & 0x1) == 0x1)
-            if(insert > t[0] && insert < t[1] && softclips > a.getReadLength() * 0.20d)
+            if(insert > t[0] && insert < t[1] && softclips < softthresh)
                 return; // This entry was properly mated and was not discordant; we don't need it
         
         if(!buffer.containsKey(r))
@@ -246,12 +251,15 @@ public class SamRecordMatcher extends TempDataClass {
         else
             return 1;
     }
+    
+    /*
+    TODO fix this to make sure that it is giving the proper softclip ammount
+    */
     private int getCigarSoftClips(Cigar c){
         return c.getCigarElements()
                 .stream()
-                .filter((s) -> s.getOperator().equals(CigarOperator.S))
-                .mapToInt((s) -> {return s.getLength();})
-                .sum();
+                .filter((s) -> s.getOperator().equals(CigarOperator.S) || s.getOperator().equals(CigarOperator.SOFT_CLIP))
+                .map((s) -> s.getLength()).reduce(0, Integer::sum);
     }
     
     private boolean isSplit(String[] segs){
