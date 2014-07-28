@@ -93,13 +93,13 @@ public class SplitOutputHandle {
         // TODO: Unfortunately, Mrsfast does not allow for split read alignment of
         // variable length reads. I will have to implement a side method that 
         // processes the reads differently based on their length
-        int splitter = len / 2;
+        int splitter = Math.floorDiv(len, 2);
         
         String tS1 = segs[12].substring(0, splitter);
-        String tS2 = segs[12].substring(splitter, len);
+        String tS2 = segs[12].substring(splitter, splitter * 2);
 
         String tQ1 = segs[13].substring(0, splitter);
-        String tQ2 = segs[13].substring(splitter, len);
+        String tQ2 = segs[13].substring(splitter, splitter * 2);
         
         try {
             fq1.write(rn1 + nl + tS1 + nl + "+" + nl + tQ1 + nl);

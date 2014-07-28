@@ -156,6 +156,8 @@ public class BufferedSetReader {
                 if(!(segs[2].equals(this.chr))){
                     continue;
                 }
+                if(segs.length < 13)
+                    continue;
                 String end = String.valueOf(Integer.parseInt(segs[3]) + segs[9].length());
                 anchorRead aR = new anchorRead(segs[2], segs[3], end, segs[0], segs[1], segs[11], segs[12], segs[10]);
                 String clone = rn.GetCloneName(segs[0], Integer.valueOf(segs[1]));
@@ -327,6 +329,6 @@ public class BufferedSetReader {
     }
     private void createGapOverlapTool(String gapFile){
         this.gaps = new GapOverlap(gapFile);
-        System.out.println("[VHSR INPUT] Finished loading gap file: " + gapFile);
+        System.out.println("[RPSR INPUT] Finished loading gap file: " + gapFile);
     }
 }

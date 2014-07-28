@@ -96,8 +96,18 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         }else if(b.getReadFlags().contains(readEnum.IsSplit)){
             if((this.innerStart < b.innerEnd
                 && this.innerEnd > b.innerStart)
-                && svTypeConsistency(this.svType, b.getSVType())){
-                // Split read overlap
+                && svTypeConsistency(this.svType, b.getSVType())
+                && divSup > -1
+                && splitSup == -1 ){
+                // Split read overlap with divet read pair
+                return true;
+            }else if(this.innerStart > b.Start()
+                && this.innerEnd < b.End()
+                && this.Start() < b.innerStart
+                && this.End() > b.innerEnd
+                && svTypeConsistency(this.svType, b.getSVType())
+                && splitSup > 1){
+                // Split read overlap with container with existing splits
                 return true;
             }else if(this.innerStart == b.innerStart && this.innerEnd == b.innerEnd
                     && svTypeConsistency(this.svType, b.getSVType())){
