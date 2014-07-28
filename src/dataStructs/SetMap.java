@@ -6,10 +6,13 @@ package dataStructs;
 
 import file.BedMap;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
  * @author bickhart
+ * @param <T>
  */
 public class SetMap<T extends BedSet> extends BedMap<T>{
     public SetMap(){
@@ -58,22 +61,18 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
         return false;
     }
     public ArrayList<BedSet> getUnsortedBedList(String chr){
-        ArrayList<BedSet> working = new ArrayList<>();
-        for(int bin : this.getBins(chr)){
-            for(BedSet b : this.getBedAbstractList(chr, bin)){
-                working.add(b);
-            }
-        }
-        return working;
+        List<BedSet> working = this.getBins(chr)
+                .parallelStream()
+                .flatMap((s) -> this.getBedAbstractList(chr, s).stream())
+                .collect(Collectors.toList());
+        return (ArrayList<BedSet>)working;
     }
     
     public int getCountElements(String chr){
-        int c = 0;
-        for(int bin : this.getBins(chr)){
-            for(BedSet b : this.getBedAbstractList(chr, bin)){
-                c++;
-            }
-        }
+        int c = this.getBins(chr)
+                .parallelStream()
+                .flatMap((s) -> this.getBedAbstractList(chr, s).parallelStream())
+                .mapToInt((s) -> 1).sum();
         return c;
     }
     

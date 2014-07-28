@@ -70,20 +70,6 @@ public class MrsFastRuntimeFactory{
                 samfiles.put(rg, samstr);
                 Runnable r = processStringsToRecords(FileHeader, outbase, rg, samstr);
                 r.run();
-                //Runnable r = () -> {
-                        
-                        //SAMFileReader reader = new SAMFileReader(new File(samstr));
-                        //SAMFileHeader head = reader.getFileHeader();
-                        
-                        /*SAMFileWriter bam = sfact.makeBAMWriter(SAMFileHeader, false, new File(outbase + "." + rg + ".bam"));
-                        SAMRecordIterator itr = reader.iterator();
-                        while(itr.hasNext()){
-                        bam.addAlignment(itr.next());
-                        }
-                        itr.close();
-                        reader.close();
-                        bam.close();*/
-                    //};
                 bamfiles.put(rg, outbase + "." + rg + ".bam");
                 //ex.submit(r);
             } catch (InterruptedException | ExecutionException ex1) {

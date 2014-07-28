@@ -89,7 +89,11 @@ public class SplitOutputHandle {
         String rn2 = "@" + segs[3] + "_2";
         
         int len = segs[12].length();
-        int splitter = firstSplitSeg(segs[8], len);
+        //int splitter = firstSplitSeg(segs[8], len);
+        // TODO: Unfortunately, Mrsfast does not allow for split read alignment of
+        // variable length reads. I will have to implement a side method that 
+        // processes the reads differently based on their length
+        int splitter = len / 2;
         
         String tS1 = segs[12].substring(0, splitter);
         String tS2 = segs[12].substring(splitter, len);

@@ -19,6 +19,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -226,11 +227,10 @@ public class SamRecordMatcher extends TempDataClass {
         if(!this.anchorlookup.isEmpty()){
             int anchorcount = this.anchorlookup.keySet().stream().map((s) -> anchorlookup.get(s).keySet().size()).reduce(0,Integer::sum);
             System.err.println("[RECORD MATCHER] Identified " + anchorcount + " soft clipped reads that need anchors identified.");
-            Map<String, Boolean> anchorfound = anchorlookup.keySet()
-                    .stream()
-                    .flatMap(s -> anchorlookup.get(s).keySet().stream())
-                    .collect(Collectors.toMap((s) -> s, (s) -> false));
-            
+            Map<String, Boolean> anchorfound = anchorlookup.values().stream()
+                .map(Map::keySet)
+                .flatMap(Set::stream)
+                .collect(Collectors.toMap(s -> s, s -> false));
             samItr.forEachRemaining((s) -> {
                 SAMReadGroupRecord r;
                 if(this.checkRGs)
