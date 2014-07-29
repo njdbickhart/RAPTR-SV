@@ -259,10 +259,19 @@ public class BufferedSetReader {
             for(anchorRead anchor : aArray){
                 // Easy balanced split pairing
                 // Just make sure that it isnt too long!
-                if(Math.abs(sArray.get(0).Start() - anchor.Start()) < 500000){
+                // Added in a logical test to ensure that the split read isn't 5 bp long
+                // INDEL detection is best done at the alignment stage
+                if(Math.abs(sArray.get(0).Start() - anchor.Start()) < 500000
+                        && subtractClosest(sArray.get(0).Start(), sArray.get(0).End(), 
+                                sArray.get(1).Start(), sArray.get(1).End()) > 5){
                     splits.add(new pairSplit(anchor, sArray.get(0), sArray.get(1), clone));
                 }
             }
+        }
+        
+        else if(sArray.size() >= 20){
+            // this is a likely repetitive read mapping, so we're going to ignore it
+            // and hope it goes away!
         }
         
         else{
@@ -294,7 +303,9 @@ public class BufferedSetReader {
                     for(splitRead fs : forward){
                         for(splitRead rs: reverse){
                             if(Math.abs(fs.Start() - anchor.Start()) < 500000 &&
-                                    Math.abs(rs.Start() - anchor.Start()) < 500000){
+                                    Math.abs(rs.Start() - anchor.Start()) < 500000
+                                    && subtractClosest(fs.Start(), fs.End(), 
+                                        rs.Start(), rs.End()) > 5){
                                 splits.add(new pairSplit(anchor, fs, rs, clone));
                             }
                         }
@@ -304,6 +315,14 @@ public class BufferedSetReader {
         }
         return splits;
     }
+    
+    private int subtractClosest(int s1, int e1, int s2, int e2){
+        if(Math.abs(s1 - e2) > Math.abs(s2 - e1))
+            return Math.abs(s2 - e1);
+        else
+            return Math.abs(s1 - e2);
+    }
+    
     private void appendSplitToConstruct(splitRead sr, String clone){
         if(this.soleSplits.containsKey(clone)){
             this.soleSplits.get(clone).add(sr);

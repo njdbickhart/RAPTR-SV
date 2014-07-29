@@ -12,6 +12,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
 
 
 /**
@@ -27,8 +31,10 @@ public class weightCoverEvents{
     private final ArrayList<Insertions> insertions;
     private final HashSet<String> names;
     private final boolean debugmode;
+    private final int thresh;
+    //private final ForkJoinPool pool;
     
-    public weightCoverEvents(SetMap sets, String chr, boolean debug){
+    public weightCoverEvents(SetMap sets, String chr, boolean debug, int thresh, int threads){
         this.inputSets = sets.getUnsortedBedList(chr);
         this.chr = chr;
         this.inversions = new ArrayList<>();
@@ -37,6 +43,9 @@ public class weightCoverEvents{
         this.insertions = new ArrayList<>();
         this.names = new HashSet<>();
         debugmode = debug;
+        this.thresh = thresh;
+        //this.pool = new ForkJoinPool(threads);
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", String.valueOf(threads));
     }
     
     public void calculateInitialSetStats(){
@@ -50,36 +59,42 @@ public class weightCoverEvents{
         // Create Array of elements sorted by coordinates
         ArrayList<CoordTree> coordsorted;
         coordsorted = new ArrayList<>(this.inputSets.size());
-        for(BufferedInitialSet s : this.inputSets){
-            if(s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV){
-                // Only needed for inversions
-                // Going to be greedy here and use INSINV and DELINV for Inversion finding, but will treat them
-                //  as deletions or insertions if they have high support in the main routine
-                coordsorted.add(new CoordTree(s));
-            }
-            s.reCalculateValues(names);
+        // Only needed for inversions
+        // Going to be greedy here and use INSINV and DELINV for Inversion finding, but will treat them
+        // as deletions or insertions if they have high support in the main routine
+        this.inputSets.stream()
+                .filter(s -> s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV)
+                .forEach(s -> coordsorted.add(new CoordTree(s)));
+        
+        // Parallel implementation to try to speed up calculations
+        this.inputSets.parallelStream()
+                .forEach(s -> s.reCalculateValues(names));
+        /*for(BufferedInitialSet s : this.inputSets){
+        if(s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV){
+        // Only needed for inversions
+        // Going to be greedy here and use INSINV and DELINV for Inversion finding, but will treat them
+        //  as deletions or insertions if they have high support in the main routine
+        coordsorted.add(new CoordTree(s));
         }
+        s.reCalculateValues(names);
+        }*/
         //SortWeightMap supportSort = new SortWeightMap();
         int initialSize = this.inputSets.size();
         int finalCount = 0, removal = 0;
         for(int z = 0; z < initialSize; z++){
             // Now sort list of elements for the weight cover algorithm 
-            Collections.sort(this.inputSets, new Comparator<BufferedInitialSet>() {
-
-                @Override
-                public int compare(BufferedInitialSet t, BufferedInitialSet t1) {
-                    if(t.sumFullSupport < t1.sumFullSupport) {
+            Collections.sort(this.inputSets, (BufferedInitialSet t, BufferedInitialSet t1) -> {
+                if(t.sumFullSupport < t1.sumFullSupport) {
+                    return 1;
+                }else if (t.sumFullSupport > t1.sumFullSupport) {
+                    return -1;
+                }else{
+                    if (t.sumUnbalSupport < t1.sumUnbalSupport) {
                         return 1;
-                    }else if (t.sumFullSupport > t1.sumFullSupport) {
+                    }else if (t.sumUnbalSupport > t1.sumUnbalSupport) {
                         return -1;
-                    }else{
-                        if (t.sumUnbalSupport < t1.sumUnbalSupport) {
-                            return 1;
-                        }else if (t.sumUnbalSupport > t1.sumUnbalSupport) {
-                            return -1;
-                        }else {
-                            return 0;
-                        }
+                    }else {
+                        return 0;
                     }
                 }
             });
@@ -99,25 +114,40 @@ public class weightCoverEvents{
                 case EVERSION:
                     ProcessTanDup(working); break;
                 default:
-                    System.out.println("Error with enum! " + working.svType);
+                    break;
             }
             
-            ArrayList<BufferedInitialSet> toRemove = new ArrayList<>();
+            //ArrayList<BufferedInitialSet> toRemove = new ArrayList<>();
             this.inputSets.get(0).closeTemp('A');
             this.inputSets.remove(0);
             removal++;
-            for(int i = 0; i < this.inputSets.size(); i++){
-                this.inputSets.get(i).reCalculateValues(names);
-                // Removes all sets that have less than 1 supporting read (and mapping quality)
-                if(this.inputSets.get(i).sumFullSupport <= 1d){
-                    this.inputSets.get(i).closeTemp('A');
-                    toRemove.add(this.inputSets.get(i));
-                    removal++;
-                }
+            
+            // Reduction based mapping methods to speed up calculation
+            // Allows the devotion of more threads to the stream here
+            this.inputSets.parallelStream()
+                    .forEach(s -> s.reCalculateValues(names));
+            
+            List<BufferedInitialSet> remover = this.inputSets.parallelStream()
+                    .filter(s -> s.sumFullSupport < thresh)
+                    .collect(Collectors.toList());
+            
+            removal += remover.size();
+            for(BufferedInitialSet r : remover){
+                this.inputSets.remove(r);
+            }
+            
+            /*for(int i = 0; i < this.inputSets.size(); i++){
+            this.inputSets.get(i).reCalculateValues(names);
+            // Removes all sets that have less than 1 supporting read (and mapping quality)
+            if(this.inputSets.get(i).sumFullSupport < thresh){
+            this.inputSets.get(i).closeTemp('A');
+            toRemove.add(this.inputSets.get(i));
+            removal++;
+            }
             }
             for(int x = 0; x < toRemove.size(); x++){
-                this.inputSets.remove(toRemove.get(x));
-            }
+            this.inputSets.remove(toRemove.get(x));
+            }*/
             if(this.inputSets.isEmpty()){
                 break;
             }

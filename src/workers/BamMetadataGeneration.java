@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMReadGroupRecord;
@@ -59,13 +60,18 @@ public class BamMetadataGeneration {
             if((rFlags & 0x4) == 0x4 || (rFlags & 0x8) == 0x8 || !((rFlags & 0x1) == 0x1))
                 continue;
             
+            // If the insert size is zero, skip it
+            if(s.getInferredInsertSize() == 0)
+                continue;
+            
             if(!insertSizes.containsKey(rgid))
                 insertSizes.put(rgid, new ArrayList<>(samplimit));
             if(insertSizes.get(rgid).size() >= samplimit){
                 if(checkIfSamplingDone(samplimit))
                     break;
-            }else
+            }else{
                 insertSizes.get(rgid).add(Math.abs(s.getInferredInsertSize()));
+            }
         }
         itr.close();
         sam.close();
@@ -92,9 +98,24 @@ public class BamMetadataGeneration {
         // second value is the higher threshold (avg + 3 std)
         // third is the maxdist
         Map<String, Integer[]> vs = new HashMap<>();
+        // Due to some issues where repeats map all over the reference genome
+        // I'm going to have to alter this routine to take a median estimation 
+        // and a MAD 
         this.insertSizes.keySet().stream().forEach((r) -> {
-            double avg = stats.StdevAvg.IntAvg(this.insertSizes.get(r));
-            double stdev = stats.StdevAvg.stdevInt(avg, this.insertSizes.get(r));
+            int median = stats.MedianAbsoluteDeviation.Median(this.insertSizes.get(r));
+            int mad = stats.MedianAbsoluteDeviation.MAD(this.insertSizes.get(r));
+            List<Integer> filtered = this.insertSizes.get(r).stream()
+                    .filter(s -> s < median + (mad * 10))
+                    .collect(Collectors.toList());
+            
+            long fvalues = this.insertSizes.get(r).parallelStream()
+                    .filter(s -> s < median + (mad * 10))
+                    .count();
+            if(fvalues > 0)
+                System.err.println("[METADATA] Identified " + fvalues + " sampled insert lengths greater than a Median (" + median + ") * 10 MAD (" + mad + ") in RG:" + r);
+            
+            double avg = stats.StdevAvg.IntAvg(filtered);
+            double stdev = stats.StdevAvg.stdevInt(avg, filtered);
             Double[] d = {avg, stdev};
             this.values.put(r, d);
             int lower = (int) Math.round(avg - (3 * stdev));

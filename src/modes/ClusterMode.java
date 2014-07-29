@@ -23,6 +23,8 @@ public class ClusterMode {
     private final String outBase;
     private final boolean debug;
     private int buffer = 10;
+    private int threshold = 2;
+    private int threads = 1;
     
     public ClusterMode(SimpleModeCmdLineParser values){
         flatFile = values.GetValue("flatfile");
@@ -32,6 +34,10 @@ public class ClusterMode {
         if(values.HasOpt("buffer"))
             buffer = Integer.parseInt(values.GetValue("buffer"));
         debug = values.HasOpt("debug");
+        if(values.HasOpt("thresh"))
+            threshold = Integer.parseInt(values.GetValue("thresh")) + 1;
+        if(values.HasOpt("threads"))
+            threads = Integer.parseInt(values.GetValue("threads"));
     }
     
     public void run(){
@@ -40,7 +46,8 @@ public class ClusterMode {
         BufferedSetReader reader = new BufferedSetReader(flatFile, gapFile, chr, buffer);
         
         // Run set weight cover to cluster sets
-        weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), chr, debug);
+        
+        weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), chr, debug, threshold, threads);
         finalEvents.calculateInitialSetStats();
         
         finalEvents.run();

@@ -44,7 +44,7 @@ public class StdevAvg {
         return s / sum.length;
     }
     
-    public static double convertFltAvg(ArrayList<Float> sum){
+    public static double convertFltAvg(List<Float> sum){
         if(sum.size() == 0){
             return 0.0d;
         }
@@ -55,7 +55,7 @@ public class StdevAvg {
         return d / (double) sum.size();
     }
     
-    public static double stdevFlt(ArrayList<Float> sum){
+    public static double stdevFlt(List<Float> sum){
         if(sum.size() == 0){
             return 0;
         }
@@ -68,7 +68,7 @@ public class StdevAvg {
         return Math.sqrt(variance);
     }
     
-    public static double stdevFlt(double avg, ArrayList<Float> sum){
+    public static double stdevFlt(double avg, List<Float> sum){
         if(sum.isEmpty() || sum.size() == 1){
             return 0;
         }        
@@ -80,7 +80,7 @@ public class StdevAvg {
         return Math.sqrt(variance);
     }
     
-    public static double stdevInt(double avg, ArrayList<Integer> sum){
+    public static double stdevInt(double avg, List<Integer> sum){
         if(sum.isEmpty() || sum.size() == 1){
             return 0;
         }        
