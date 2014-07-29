@@ -269,7 +269,7 @@ public class BufferedSetReader {
             }
         }
         
-        else if(sArray.size() >= 20){
+        else if(sArray.size() >= 30){
             // this is a likely repetitive read mapping, so we're going to ignore it
             // and hope it goes away!
         }

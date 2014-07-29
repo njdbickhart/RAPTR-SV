@@ -105,12 +105,13 @@ public class BamMetadataGeneration {
             int median = stats.MedianAbsoluteDeviation.Median(this.insertSizes.get(r));
             int mad = stats.MedianAbsoluteDeviation.MAD(this.insertSizes.get(r));
             List<Integer> filtered = this.insertSizes.get(r).stream()
-                    .filter(s -> s < median + (mad * 10))
+                    .filter(s -> s < median + (mad * 20))
                     .collect(Collectors.toList());
             
             long fvalues = this.insertSizes.get(r).parallelStream()
-                    .filter(s -> s < median + (mad * 10))
+                    .filter(s -> s > median + (mad * 20))
                     .count();
+            
             if(fvalues > 0)
                 System.err.println("[METADATA] Identified " + fvalues + " sampled insert lengths greater than a Median (" + median + ") * 10 MAD (" + mad + ") in RG:" + r);
             
