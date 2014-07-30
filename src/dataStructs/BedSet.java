@@ -34,6 +34,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      * The type of SV this indicates
      */
     public callEnum svType;   
+    
+    /**
+     * The number of rawReads that were added to this set
+     */
+    public int rawReads = 0;
     /**
      * The maximum amount of read pairs to store before spilling to disk
      */
@@ -294,6 +299,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         if(this.pairs.size() >= this.maxBuffer){
             this.dumpDataToDisk();            
         }
+        this.rawReads += 1;
         ReadPair working = (ReadPair)a;
         //this.refineBedCoords(working.Start(), working.End(), working.getInnerEnd(), working.getInnerEnd());
         if(this.start == 0 && this.end == 0){

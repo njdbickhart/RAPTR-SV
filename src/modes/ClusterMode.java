@@ -24,6 +24,7 @@ public class ClusterMode {
     private final boolean debug;
     private int buffer = 10;
     private int threshold = 2;
+    private double phredFilter = 1d;
     private int threads = 1;
     
     public ClusterMode(SimpleModeCmdLineParser values){
@@ -38,6 +39,8 @@ public class ClusterMode {
             threshold = Integer.parseInt(values.GetValue("thresh")) + 1;
         if(values.HasOpt("threads"))
             threads = Integer.parseInt(values.GetValue("threads"));
+        if(values.HasOpt("filter"))
+            phredFilter = Double.parseDouble(values.GetValue("filter"));
     }
     
     public void run(){
@@ -47,7 +50,7 @@ public class ClusterMode {
         
         // Run set weight cover to cluster sets
         
-        weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), chr, debug, threshold, threads);
+        weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), chr, debug, threshold, threads, phredFilter);
         finalEvents.calculateInitialSetStats();
         
         finalEvents.run();

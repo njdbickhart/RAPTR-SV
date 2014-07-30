@@ -32,9 +32,10 @@ public class weightCoverEvents{
     private final HashSet<String> names;
     private final boolean debugmode;
     private final int thresh;
+    private final double phredFilter;
     //private final ForkJoinPool pool;
     
-    public weightCoverEvents(SetMap sets, String chr, boolean debug, int thresh, int threads){
+    public weightCoverEvents(SetMap sets, String chr, boolean debug, int thresh, int threads, double phredFilter){
         this.inputSets = sets.getUnsortedBedList(chr);
         this.chr = chr;
         this.inversions = new ArrayList<>();
@@ -44,6 +45,7 @@ public class weightCoverEvents{
         this.names = new HashSet<>();
         debugmode = debug;
         this.thresh = thresh;
+        this.phredFilter = phredFilter;
         //this.pool = new ForkJoinPool(threads);
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", String.valueOf(threads));
     }
@@ -128,7 +130,7 @@ public class weightCoverEvents{
                     .forEach(s -> s.reCalculateValues(names));
             
             List<BufferedInitialSet> remover = this.inputSets.parallelStream()
-                    .filter(s -> s.sumFullSupport < thresh)
+                    .filter(s -> s.rawReads < thresh || s.sumFullSupport < phredFilter)
                     .collect(Collectors.toList());
             
             removal += remover.size();
