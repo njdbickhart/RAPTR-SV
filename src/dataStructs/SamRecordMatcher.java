@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
+import net.sf.samtools.SAMFormatException;
 import net.sf.samtools.SAMReadGroupRecord;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordIterator;
@@ -231,7 +232,15 @@ public class SamRecordMatcher extends TempDataClass {
                 .map(Map::keySet)
                 .flatMap(Set::stream)
                 .collect(Collectors.toMap(s -> s, s -> false));
-            samItr.forEachRemaining((s) -> {
+            while(samItr.hasNext()){
+                SAMRecord s;
+                try{
+                    s = samItr.next();
+                }catch(SAMFormatException ex){
+                    // This should ignore sam validation errors for crap reads
+                    System.err.println(ex.getMessage());
+                    continue;
+                }
                 SAMReadGroupRecord r;
                 if(this.checkRGs)
                     r = s.getReadGroup();
@@ -250,7 +259,7 @@ public class SamRecordMatcher extends TempDataClass {
                         }
                     }
                 }
-            });
+            }
             long found = anchorfound.keySet().stream().filter((e) -> anchorfound.get(e)).count();
             long notfound = (long)anchorfound.size() - found;
             System.err.println("[RECORD MATCHER] Collected: " + found + " anchor reads and missed " + notfound + " out of " + anchorfound.size() + " original values");

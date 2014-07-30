@@ -18,6 +18,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
 import net.sf.samtools.SAMFileReader;
+import net.sf.samtools.SAMFormatException;
+import net.sf.samtools.SAMRecord;
+import net.sf.samtools.SAMRecordIterator;
 import workers.BamMetadataGeneration;
 import workers.MrsFastRuntimeFactory;
 
@@ -75,9 +78,19 @@ public class PreprocessMode {
         // Run through the BAM file generating split and divet data
         SAMFileReader reader = new SAMFileReader(new File(input));
         SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
-        reader.iterator().forEachRemaining((s) ->{
+        SAMRecordIterator itr = reader.iterator();
+        while(itr.hasNext()){
+            SAMRecord s;
+            try{
+                s = itr.next();
+            }catch(SAMFormatException ex){
+                // this should ignore sam validation errors for crap reads
+                System.err.println(ex.getMessage());
+                continue;
+            }
             worker.bufferedAdd(s);
-        });
+        }
+        itr.close();
         
         worker.convertToVariant(divets, splits);
         reader = new SAMFileReader(new File(input));
