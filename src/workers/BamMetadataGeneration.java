@@ -31,10 +31,23 @@ public class BamMetadataGeneration {
     private SAMFileHeader header;
     private final boolean expectRG;
     
+    /**
+     * Object constructor
+     * @param hasRG This is a boolean flag telling the MetadataGenerator to search the 
+     * BAM file for read groups and to treat them separately. A value of "false" will
+     * ignore all readgroups in the file.
+     */
     public BamMetadataGeneration(boolean hasRG){
         expectRG = hasRG;
     }
     
+    /**
+     * This is a main, workhorse method designed to run through the BAM file and
+     * calculate the read group average and stdev values.
+     * @param input The string of the path to the BAM file to scan
+     * @param samplimit A limit on the number of BAM file entries per readgroup
+     * to sample statistics from. Higher limits require more memory.
+     */
     public void ScanFile(String input, int samplimit){
         SAMFileReader sam = new SAMFileReader(new File(input));
         sam.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
@@ -76,6 +89,14 @@ public class BamMetadataGeneration {
         itr.close();
         sam.close();
     }
+
+    /**
+     * This method creates the Divet Output factories needed for discordant
+     * read pairs
+     * @param outbase The String representing the path to the output files
+     * @return A Map of all Divet output factories. Key: the read group, Value:
+     * the divet output factory class
+     */
     public Map<String, DivetOutputHandle> generateDivetOuts(String outbase){
         Map<String, DivetOutputHandle> holder = new HashMap<>();
         this.rgList.stream().forEach((s) -> {
@@ -85,6 +106,13 @@ public class BamMetadataGeneration {
         return holder;
     }
     
+    /**
+     * This method generates the Split read output factories needed for putative
+     * split read entries
+     * @param outbase The String representing the path to the output files
+     * @return A Map of all Split output factories. Key: the read group, Value:
+     * the split output factory class
+     */
     public Map<String, SplitOutputHandle> generateSplitOuts(String outbase){
         Map<String, SplitOutputHandle> holder = new HashMap<>();
         this.rgList.stream().forEach((s) -> {
@@ -93,6 +121,17 @@ public class BamMetadataGeneration {
         });
         return holder;
     }
+
+    /**
+     * This function is designed to retrieve the metadata created by this class
+     * for use in subsequence paired end discordancy discovery
+     * @param maxdist The maximum distance on the same chromosome to limit paired end
+     * discordant read detection
+     * @return A map of the threshold values for each read group. Map Key: 
+     * the read group. Value: an integer array where the first value is the lower
+     * threshold for read lengths (insertion detection) and the second value is
+     * the upper threshold for detection (deletion detection).
+     */
     public Map<String, Integer[]> getThresholds(int maxdist){
         // First value is the lower threshold (avg - 3 std)
         // second value is the higher threshold (avg + 3 std)
@@ -137,15 +176,37 @@ public class BamMetadataGeneration {
         
         return num >= this.rgList.size();
     }
+
+    /**
+     * This getter retrieves the average insert size of the read group
+     * @param key The readgroup string
+     * @return The average insert size of the library
+     */
     public double getSampleInsSize(String key){
         return this.values.get(key)[0];
     }
+
+    /**
+     * This getter retrieves the stdev of the insert size of the read group
+     * @param key The readgroup string
+     * @return The stdev of the library
+     */
     public double getSampleInsStd(String key){
         return this.values.get(key)[1];
     }
+
+    /**
+     * This getter returns the list of all read groups found in this BAM
+     * @return An ArrayList String containing all of the read group names
+     */
     public List<String> getSampleIDs(){
         return this.rgList;
     }
+
+    /**
+     * This getter returns the SAMFileHeader extracted from this BAM file
+     * @return A SAMJDK SAMFileHeader object
+     */
     public SAMFileHeader getSamFileHeader(){
         return this.header;
     }
