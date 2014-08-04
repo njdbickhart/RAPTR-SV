@@ -77,6 +77,7 @@ public class PreprocessMode {
         
         // Run through the BAM file generating split and divet data
         SAMFileReader reader = new SAMFileReader(new File(input));
+        reader.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
         SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
         SAMRecordIterator itr = reader.iterator();
         while(itr.hasNext()){
