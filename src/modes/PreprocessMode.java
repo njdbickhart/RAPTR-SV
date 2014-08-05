@@ -95,6 +95,7 @@ public class PreprocessMode {
         
         worker.convertToVariant(divets, splits);
         reader = new SAMFileReader(new File(input));
+        reader.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
         worker.RetrieveMissingAnchors(splits, reader.iterator());
         
         System.err.println("[PREPROCESS] Generated initial split and divet data.");
