@@ -37,7 +37,7 @@ import net.sf.samtools.TextCigarCodec;
 import stats.ReadNameUtility;
 
 /**
- *
+ * TODO: rewrite this class so that it does not extend TempDataClass
  * @author bickhart
  */
 public class SamRecordMatcher extends TempDataClass {
@@ -149,6 +149,12 @@ public class SamRecordMatcher extends TempDataClass {
             BufferedReader input = new BufferedReader(new InputStreamReader(sort.getInputStream()));
             if(debug)
                 this.debugWriter = Files.newBufferedWriter(this.debugOut, Charset.defaultCharset());
+            
+            /*
+            TODO: This is an area where I can speed up processing by running each read group in a separate thread
+            I would need to rewrite the class so that SamRecordMatcher is not a temp data file storage class, but rather
+            a separate class stores the data.
+            */
             while((line = input.readLine()) != null){
                 line = line.trim();
                 String[] segs = line.split("\t");
@@ -228,10 +234,14 @@ public class SamRecordMatcher extends TempDataClass {
         if(!this.anchorlookup.isEmpty()){
             int anchorcount = this.anchorlookup.keySet().stream().map((s) -> anchorlookup.get(s).keySet().size()).reduce(0,Integer::sum);
             System.err.println("[RECORD MATCHER] Identified " + anchorcount + " soft clipped reads that need anchors identified.");
-            Map<String, Boolean> anchorfound = anchorlookup.values().stream()
-                .map(Map::keySet)
-                .flatMap(Set::stream)
-                .collect(Collectors.toMap(s -> s, s -> false));
+            //Map<String, Boolean> anchorfound = anchorlookup.values().stream()
+            //    .map(Map::keySet)
+            //    .flatMap(Set::stream)
+            //    .collect(Collectors.toMap(s -> s, s -> false));
+            Map<String, Boolean> anchorfound = new HashMap<>();
+            for(String s : anchorlookup.keySet()){
+                anchorfound.put(s, false);
+            }
             while(samItr.hasNext()){
                 SAMRecord s;
                 try{

@@ -25,8 +25,9 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
                 if(this.containsBin(pair.Chr(), b)){
                     for(T set : this.getBedAbstractList(pair.Chr(), b)){
                         if(set.pairOverlaps(pair)){
-                            set.addReadPair(pair);
-                            return true;
+                            if(pair.innerEnd > set.innerStart)
+                                set.addReadPair(pair); // Only if the pair does not make the interior coordinates squished!
+                            return true; // Even if the pair wasn't added, we reached the interior of the conditional, so we should report an overlap
                         }
                     }
                 }

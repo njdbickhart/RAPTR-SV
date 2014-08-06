@@ -54,7 +54,7 @@ public class RPSRmain {
         
         cmd.AddMode("cluster", 
                 "RPSR cluster mode" + nl +
-                "Usage: java -jar RPSR.jar [-s filelist -c chromosome -g gap file -o output prefix] (optional: -g gmsfile list, -b buffer size)" + nl
+                "Usage: java -jar RPSR.jar cluster [-s filelist -c chromosome -g gap file -o output prefix] (optional: -g gmsfile list, -b buffer size)" + nl
                 + "\t-s\tFlatfile containing records from the same reads" + nl
                 + "\t-c\tChromosome to be processed" + nl
                 + "\t-g\tAssembly Gap bed file" + nl
@@ -71,7 +71,7 @@ public class RPSRmain {
         
         cmd.AddMode("preprocess", 
                 "RPSR preprocess mode" + nl +
-                "Usage: java -jar RPSR.jar [-i input bam -o output base name -r ref genome] (optional argugments)" + nl
+                "Usage: java -jar RPSR.jar preprocess [-i input bam -o output base name -r ref genome] (optional argugments)" + nl
                 + "\t-i\tInput BWA-aligned BAM file" + nl
                 + "\t-o\tThe base output name and directory (all output files will start with this name)" + nl
                 + "\t-r\tA MrsFAST indexed reference genome fasta file for realignment" + nl
