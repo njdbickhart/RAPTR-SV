@@ -19,15 +19,11 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import net.sf.samtools.Cigar;
-import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFormatException;
 import net.sf.samtools.SAMReadGroupRecord;
@@ -42,6 +38,7 @@ import stats.ReadNameUtility;
  */
 public class SamRecordMatcher extends TempDataClass {
     private final Map<SAMReadGroupRecord, Map<String, Map<Short, ArrayList<SAMRecord>>>> buffer = new HashMap<>();
+    private final Map<String, SamOutputHandle> SamTemp = new HashMap<>();
     private int overhead = 0;
     private final int threshold;
     private final Map<String, Integer[]> thresholds;
@@ -49,6 +46,7 @@ public class SamRecordMatcher extends TempDataClass {
     private final String defId = "D";
     private final ReadNameUtility rn = new ReadNameUtility();
     private final boolean debug;
+    private final String tempOutBase;
     private Path debugOut;
     private BufferedWriter debugWriter;
     private Map<String, Map<String, Short>> anchorlookup;
@@ -59,8 +57,15 @@ public class SamRecordMatcher extends TempDataClass {
         this.thresholds = thresholds;
         this.createTemp(Paths.get(tmpoutname));
         this.debug = debug;
-        if(debug)
+        if(debug){
             debugOut = Paths.get("SamSupport.tab");
+            try {
+                this.debugWriter = Files.newBufferedWriter(this.debugOut, Charset.defaultCharset());
+            } catch (IOException ex) {
+                Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }    
+        this.tempOutBase = tmpoutname;
     }
     
     public void bufferedAdd(SAMRecord a) {
@@ -90,19 +95,9 @@ public class SamRecordMatcher extends TempDataClass {
             if(insert > t[0] && insert < t[1] && softclips < softthresh)
                 return; // This entry was properly mated and was not discordant; we don't need it
         
-        if(!buffer.containsKey(r))
-            buffer.put(r, new HashMap<String, Map<Short, ArrayList<SAMRecord>>>());
-        if(!buffer.get(r).containsKey(clone))
-            buffer.get(r).put(clone, new HashMap<Short, ArrayList<SAMRecord>>());
-        if(!buffer.get(r).get(clone).containsKey(num))
-            buffer.get(r).get(clone).put(num, new ArrayList<SAMRecord>());
-        buffer.get(r).get(clone).get(num).add(a);
-        overhead++;
-        
-        if(overhead >= threshold){
-            dumpDataToDisk();
-            overhead = 0;
-        }
+        if(!SamTemp.containsKey(r.getId()))
+            SamTemp.put(r.getId(), new SamOutputHandle(this.threshold, r.getId(), this.tempOutBase));
+        SamTemp.get(r.getId()).bufferedAdd(a, clone, num);
     }
 
     @Override
@@ -132,102 +127,123 @@ public class SamRecordMatcher extends TempDataClass {
         this.buffer.clear();
     }
     
+    public void combineRecordMatcher(SamRecordMatcher s){
+        s.SamTemp.keySet().forEach((k) -> {
+            if(this.SamTemp.containsKey(k)){
+                this.SamTemp.get(k).combineTempFiles(s.SamTemp.get(k));
+            }else{
+                this.SamTemp.put(k, s.SamTemp.get(k));
+            }
+        });
+        
+        s.anchorlookup.keySet().forEach((k) -> {
+            if(!this.anchorlookup.containsKey(k))
+                this.anchorlookup.put(k, new HashMap<String, Short>());
+            s.anchorlookup.get(k).keySet().forEach((b) -> {
+                this.anchorlookup.get(k).put(b, s.anchorlookup.get(k).get(b));
+            });
+        });
+    }
+    
     public void convertToVariant(Map<String, DivetOutputHandle> divets, Map<String, SplitOutputHandle> splits){
         if(!this.buffer.isEmpty())
             this.dumpDataToDisk();
         
         anchorlookup = new HashMap<>();
         try {
-            // Use Unix sort to sort the file by the multiple beginning columns
-            ProcessBuilder p = new ProcessBuilder("sort", "-k1,1", "-k2,2", "-k3,3n", this.tempFile.toString());
-            p.redirectError(new File("sort.error.log"));
-            Process sort = p.start();
-            
-            String line, lastrg = "none", last = "none";
-            String[] lastsegs = null;
-            ArrayList<String[]> records = new ArrayList<>();
-            BufferedReader input = new BufferedReader(new InputStreamReader(sort.getInputStream()));
-            if(debug)
-                this.debugWriter = Files.newBufferedWriter(this.debugOut, Charset.defaultCharset());
-            
-            /*
-            TODO: This is an area where I can speed up processing by running each read group in a separate thread
-            I would need to rewrite the class so that SamRecordMatcher is not a temp data file storage class, but rather
-            a separate class stores the data.
-            */
-            while((line = input.readLine()) != null){
-                line = line.trim();
-                String[] segs = line.split("\t");
-                
-                // clone name is not the same as the last one
-                if(!segs[1].equals(last)){
-                    if(!records.isEmpty()){
-                        if(records.stream().anyMatch((s) -> isSplit(s))){
-                            int scount = 0, acount = 0;
-                            for(String[] r : records){
-                                if(this.isAnchor(r)){
-                                    splits.get(lastrg).AddAnchor(r);
-                                    if(r[1].equals("chr29-30796179-30796718-2:1:0-4:0:0-692a3"))
-                                        System.err.println("Anchor: " + StrUtils.StrArray.Join(r, "\t"));
-                                    if(debug)
-                                        this.debugWriter.write("Anchor\t" + StrUtils.StrArray.Join(r, "\t") + System.lineSeparator());
-                                    acount++;
-                                }else{
-                                    splits.get(lastrg).AddSplit(r);
-                                    if(debug)
-                                        this.debugWriter.write("Split\t" + StrUtils.StrArray.Join(r, "\t") + System.lineSeparator());
-                                    scount++;
-                                }
-                            }
-                            if(acount == 0 && scount > 0){
-                                // We had more than one split read, but no anchors
-                                // Store the information we need to get the anchors next round
-                                String[] temp = records.get(0);
-                                if(!anchorlookup.containsKey(temp[0]))
-                                    anchorlookup.put(temp[0], new HashMap<>());
-                                anchorlookup.get(temp[0]).put(temp[1], this.flipCloneNum(Short.parseShort(temp[2])));
-                            }
-                        }else if(records.size() > 1){
-                            Integer[] t = thresholds.get(lastrg);
-                            SamToDivet converter = new SamToDivet(last, t[0], t[1], t[2]);
-                            records.stream().forEach((r) -> {
-                                // Process the XAZTag if it exists
-                                processXAZTag(r).stream().forEach((n) -> {converter.addLines(n);});
-                                converter.addLines(r);
-                                try{
-                                    if(debug)
-                                        this.debugWriter.write("Disc\t" + StrUtils.StrArray.Join(r, "\t") + System.lineSeparator());
-                                }catch(IOException ex){
-                                    ex.printStackTrace();
-                                }
-                            });
-                            converter.processLinesToDivets();
-                            divets.get(lastrg).PrintDivetOut(converter.getDivets());
-                        }
-                        records.clear();
-                    }
+            this.SamTemp.keySet().parallelStream().forEach((String s) -> {
+                try{
+                TempFileSorter(splits.get(s), divets.get(s), s, SamTemp.get(s));
+                }catch(InterruptedException | IOException ex){
+                    Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+                }catch(Exception ex){
+                    Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
                 }
-                lastsegs = segs;
-                records.add(segs);
-                last = segs[1];
-                lastrg = segs[0];
-            }
-            divets.keySet().stream().map((s) -> {
-                divets.get(s).CloseHandle();
-                return s;
-            }).forEach((s) -> {
-                splits.get(s).CloseFQHandle();
             });
-            input.close();
-            
             if(debug)
                 this.debugWriter.close();
-            sort.waitFor();
-        } catch (IOException | InterruptedException ex) {
+        } catch (IOException ex) {
             Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
         } catch (Exception ex) {
             Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    private void TempFileSorter(SplitOutputHandle splits, DivetOutputHandle divets, String rg, SamOutputHandle sam) throws InterruptedException, IOException, Exception {
+        // Use Unix sort to sort the file by the multiple beginning columns
+        ProcessBuilder p = new ProcessBuilder("sort", "-k1,1", "-k2,2", "-k3,3n", sam.getTempFile().toString());
+        p.redirectError(new File("sort.error.log"));
+        Process sort = p.start();
+        String line, lastrg = "none", last = "none";
+        String[] lastsegs = null;
+        ArrayList<String[]> records = new ArrayList<>();
+        BufferedReader input = new BufferedReader(new InputStreamReader(sort.getInputStream()));
+        /*
+        TODO: This is an area where I can speed up processing by running each read group in a separate thread
+        I would need to rewrite the class so that SamRecordMatcher is not a temp data file storage class, but rather
+        a separate class stores the data.
+         */
+        while((line = input.readLine()) != null){
+            line = line.trim();
+            String[] segs = line.split("\t");
+            
+            // clone name is not the same as the last one
+            if(!segs[1].equals(last)){
+                if(!records.isEmpty()){
+                    if(records.stream().anyMatch((s) -> isSplit(s))){
+                        int scount = 0, acount = 0;
+                        for(String[] r : records){
+                            if(this.isAnchor(r)){
+                                splits.AddAnchor(r);
+                                if(r[1].equals("chr29-30796179-30796718-2:1:0-4:0:0-692a3"))
+                                    System.err.println("Anchor: " + StrUtils.StrArray.Join(r, "\t"));
+                                if(debug)
+                                    this.debugWriter.write("Anchor\t" + StrUtils.StrArray.Join(r, "\t") + System.lineSeparator());
+                                acount++;
+                            }else{
+                                splits.AddSplit(r);
+                                if(debug)
+                                    this.debugWriter.write("Split\t" + StrUtils.StrArray.Join(r, "\t") + System.lineSeparator());
+                                scount++;
+                            }
+                        }
+                        if(acount == 0 && scount > 0){
+                            // We had more than one split read, but no anchors
+                            // Store the information we need to get the anchors next round
+                            String[] temp = records.get(0);
+                            if(!anchorlookup.containsKey(temp[0]))
+                                anchorlookup.put(temp[0], new HashMap<>());
+                            anchorlookup.get(temp[0]).put(temp[1], this.flipCloneNum(Short.parseShort(temp[2])));
+                        }
+                    }else if(records.size() > 1){
+                        Integer[] t = thresholds.get(lastrg);
+                        SamToDivet converter = new SamToDivet(last, t[0], t[1], t[2]);
+                        records.stream().forEach((r) -> {
+                            // Process the XAZTag if it exists
+                            processXAZTag(r).stream().forEach((n) -> {converter.addLines(n);});
+                            converter.addLines(r);
+                            try{
+                                if(debug)
+                                    this.debugWriter.write("Disc\t" + StrUtils.StrArray.Join(r, "\t") + System.lineSeparator());
+                            }catch(IOException ex){
+                                ex.printStackTrace();
+                            }
+                        });
+                        converter.processLinesToDivets();
+                        divets.PrintDivetOut(converter.getDivets());
+                    }
+                    records.clear();
+                }
+            }
+            lastsegs = segs;
+            records.add(segs);
+            last = segs[1];
+            lastrg = segs[0];
+        }
+        divets.CloseHandle();
+        splits.CloseFQHandle();
+        input.close();
+        sort.waitFor();
     }
     
     public void RetrieveMissingAnchors(Map<String, SplitOutputHandle> splits, SAMRecordIterator samItr){

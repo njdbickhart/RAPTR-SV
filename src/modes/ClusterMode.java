@@ -34,7 +34,8 @@ public class ClusterMode {
         outBase = values.GetValue("outbase");
         if(values.HasOpt("buffer"))
             buffer = Integer.parseInt(values.GetValue("buffer"));
-        debug = values.HasOpt("debug");
+
+        debug = values.GetValue("debug").equals("true");
         if(values.HasOpt("thresh"))
             threshold = Integer.parseInt(values.GetValue("thresh")) + 1;
         if(values.HasOpt("threads"))

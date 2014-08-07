@@ -46,7 +46,7 @@ public class SplitOutputHandle {
         this.OpenFQHandle();
     }
     
-    public void AddAnchor(String[] segs){
+    public synchronized void AddAnchor(String[] segs){
         if(!fileopen)
             this.OpenAnchorHandle();
         SAMRecord sam = recordCreator.createSAMRecord(header);
@@ -77,13 +77,13 @@ public class SplitOutputHandle {
         anchorOut.addAlignment(sam);
     }
     
-    public void AddAnchor(SAMRecord s){
+    public synchronized void AddAnchor(SAMRecord s){
         if(!fileopen)
             this.OpenAnchorHandle();
         anchorOut.addAlignment(s);
     }
     
-    public void AddSplit(String[] segs){
+    public synchronized void AddSplit(String[] segs){
         String nl = System.lineSeparator();
         String rn1 = "@" + segs[3] + "_1";
         String rn2 = "@" + segs[3] + "_2";

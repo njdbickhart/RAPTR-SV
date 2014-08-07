@@ -48,8 +48,9 @@ public class DivetOutputHandle {
         fileopen = false;
     }
     
-    public void PrintDivetOut(ArrayList<divet> d){
+    public synchronized void PrintDivetOut(ArrayList<divet> d){
         try{
+            
             for(divet a : d){
                 out.write(StrUtils.StrArray.Join(a.divout, "\t"));
                 out.newLine();

@@ -10,13 +10,19 @@ import GetCmdOpt.SimpleModeCmdLineParser;
 import dataStructs.DivetOutputHandle;
 import dataStructs.SamRecordMatcher;
 import dataStructs.SplitOutputHandle;
+import file.BedSimple;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFormatException;
 import net.sf.samtools.SAMRecord;
@@ -57,7 +63,7 @@ public class PreprocessMode {
         if(values.HasOpt("samplimit"))
             samplimit = Integer.parseInt(values.GetValue("samplimit"));
         
-        debug = values.HasOpt("debug");
+        debug = values.GetValue("debug").equals("true");
     }
     
     public void run(){
@@ -65,7 +71,7 @@ public class PreprocessMode {
         BamMetadataGeneration metadata = new BamMetadataGeneration(checkRG);
         metadata.ScanFile(input, samplimit);
         
-        Map<String, Integer[]> values = metadata.getThresholds(maxdist);
+        final Map<String, Integer[]> values = metadata.getThresholds(maxdist);
         Map<String, DivetOutputHandle> divets = metadata.generateDivetOuts(outbase);
         Map<String, SplitOutputHandle> splits = metadata.generateSplitOuts(outbase);
         
@@ -76,26 +82,36 @@ public class PreprocessMode {
         });
         
         // Run through the BAM file generating split and divet data
-        SAMFileReader reader = new SAMFileReader(new File(input));
+        final SAMFileReader reader = new SAMFileReader(new File(input));
         reader.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
-        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
+        
+        SAMFileHeader h = reader.getFileHeader();
+        List<BedSimple> coords = this.getSamIntervals(h);
+        
+        SamRecordMatcher worker = coords.parallelStream()
+                .map((b) -> {
+                    SAMRecordIterator itr = reader.queryContained(b.Chr(), b.Start(), b.End());
+                    SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
+                    itr.forEachRemaining((k) -> w.bufferedAdd(k));
+                    return w;
+                }).reduce(new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug), (SamRecordMatcher a, SamRecordMatcher b) -> {a.combineRecordMatcher(b); return a;});
+        
+        /*SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
         SAMRecordIterator itr = reader.iterator();
         while(itr.hasNext()){
-            SAMRecord s;
-            try{
-                s = itr.next();
-            }catch(SAMFormatException ex){
-                // this should ignore sam validation errors for crap reads
-                System.err.println(ex.getMessage());
-                continue;
-            }
-            worker.bufferedAdd(s);
+        SAMRecord s;
+        try{
+        s = itr.next();
+        }catch(SAMFormatException ex){
+        // this should ignore sam validation errors for crap reads
+        System.err.println(ex.getMessage());
+        continue;
         }
-        itr.close();
+        worker.bufferedAdd(s);
+        }
+        itr.close();*/
         
         worker.convertToVariant(divets, splits);
-        reader = new SAMFileReader(new File(input));
-        reader.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
         worker.RetrieveMissingAnchors(splits, reader.iterator());
         
         System.err.println("[PREPROCESS] Generated initial split and divet data.");
@@ -131,5 +147,27 @@ public class PreprocessMode {
                 ex.printStackTrace();
             }
         });
+    }
+    
+    private List<BedSimple> getSamIntervals(SAMFileHeader h){
+        List<BedSimple> coords = new ArrayList<>();
+        coords = h.getSequenceDictionary().getSequences().stream().flatMap((s) -> {
+            String chr = s.getSequenceName();
+            int len = s.getSequenceLength();
+            List<BedSimple> temp = new ArrayList<>();
+            if(len < 1000000){
+                temp.add(new BedSimple(chr, 0, len));
+                return temp.stream();
+            }else{
+                for(int x = 0; x < len; x += 1000000){
+                    if(x + 1000000 > len)
+                        temp.add(new BedSimple(chr, x, len));
+                    else
+                        temp.add(new BedSimple(chr, x, x + 1000000));
+                }
+                return temp.stream();
+            }
+        }).collect(Collectors.toList());
+        return coords;
     }
 }

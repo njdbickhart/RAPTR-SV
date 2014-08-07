@@ -13,7 +13,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import net.sf.samtools.BAMIndexer;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMReadGroupRecord;
@@ -50,6 +52,14 @@ public class BamMetadataGeneration {
      */
     public void ScanFile(String input, int samplimit){
         SAMFileReader sam = new SAMFileReader(new File(input));
+        if(!sam.hasIndex()){
+            System.out.println("[METADATA] Could not find bam index file. Creating one now...");
+            BAMIndexer b = new BAMIndexer(new File(input + ".bai"), sam.getFileHeader());
+            sam.iterator().forEachRemaining((s) -> b.processAlignment(s));
+            b.finish();
+            sam.close();
+            sam = new SAMFileReader(new File(input));
+        }
         sam.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
         header = sam.getFileHeader();
         if(expectRG){
@@ -98,7 +108,7 @@ public class BamMetadataGeneration {
      * the divet output factory class
      */
     public Map<String, DivetOutputHandle> generateDivetOuts(String outbase){
-        Map<String, DivetOutputHandle> holder = new HashMap<>();
+        Map<String, DivetOutputHandle> holder = new ConcurrentHashMap<>();
         this.rgList.stream().forEach((s) -> {
             holder.put(s, new DivetOutputHandle(outbase + "." + s + ".divet"));
             holder.get(s).OpenHandle();
@@ -114,7 +124,7 @@ public class BamMetadataGeneration {
      * the split output factory class
      */
     public Map<String, SplitOutputHandle> generateSplitOuts(String outbase){
-        Map<String, SplitOutputHandle> holder = new HashMap<>();
+        Map<String, SplitOutputHandle> holder = new ConcurrentHashMap<>();
         this.rgList.stream().forEach((s) -> {
             holder.put(s, new SplitOutputHandle(outbase + "." + s + ".split.fq", outbase + "." + s + ".anchor.bam", header));
             holder.get(s).OpenAnchorHandle();
