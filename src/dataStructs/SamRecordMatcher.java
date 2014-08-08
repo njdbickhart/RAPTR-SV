@@ -19,6 +19,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -55,7 +56,7 @@ public class SamRecordMatcher extends TempDataClass {
         this.threshold = threshold;
         this.checkRGs = checkRGs;
         this.thresholds = thresholds;
-        this.createTemp(Paths.get(tmpoutname));
+        //this.createTemp(Paths.get(tmpoutname));
         this.debug = debug;
         if(debug){
             debugOut = Paths.get("SamSupport.tab");
@@ -74,9 +75,7 @@ public class SamRecordMatcher extends TempDataClass {
         int rgflags = a.getFlags();
         if(((rgflags & 0x4) == 0x4 && (rgflags & 0x8) == 0x8))
             return; // read pair did not map at all
-        
-        String clone = rn.GetCloneName(a.getReadName(), a.getFlags());
-        short num = rn.GetCloneNum(a.getReadName(), a.getFlags());
+       
         
         SAMReadGroupRecord r;
         if(this.checkRGs)
@@ -86,14 +85,23 @@ public class SamRecordMatcher extends TempDataClass {
         
         Integer[] t = this.thresholds.get(r.getId());
         int insert = Math.abs(a.getInferredInsertSize());
+        
         int softclips = 0;
         if(a.getCigarString().contains("S"))
             softclips = this.getCigarSoftClips(a.getCigar());
-        
         double softthresh = (double)a.getReadLength() * 0.20d;
         if((rgflags & 0x1) == 0x1)
             if(insert > t[0] && insert < t[1] && softclips < softthresh)
                 return; // This entry was properly mated and was not discordant; we don't need it
+        
+        // Remove any unwanted characters in the read name prior to our use of the clone function
+        if(a.getReadName().matches("[_/]")){
+            String initread = a.getReadName().replaceAll("[_/]", "-");
+            a.setReadName(initread);
+        }
+        
+        String clone = rn.GetCloneName(a.getReadName(), a.getFlags());
+        short num = rn.GetCloneNum(a.getReadName(), a.getFlags());
         
         if(!SamTemp.containsKey(r.getId()))
             SamTemp.put(r.getId(), new SamOutputHandle(this.threshold, r.getId(), this.tempOutBase));
@@ -127,21 +135,12 @@ public class SamRecordMatcher extends TempDataClass {
         this.buffer.clear();
     }
     
-    public void combineRecordMatcher(SamRecordMatcher s){
+    public synchronized void combineRecordMatcher(SamRecordMatcher s){
         s.SamTemp.keySet().forEach((k) -> {
-            if(this.SamTemp.containsKey(k)){
-                this.SamTemp.get(k).combineTempFiles(s.SamTemp.get(k));
-            }else{
-                this.SamTemp.put(k, s.SamTemp.get(k));
+            if(!this.SamTemp.containsKey(k)){
+                this.SamTemp.put(k, new SamOutputHandle(this.threshold, k, this.tempOutBase));
             }
-        });
-        
-        s.anchorlookup.keySet().forEach((k) -> {
-            if(!this.anchorlookup.containsKey(k))
-                this.anchorlookup.put(k, new HashMap<String, Short>());
-            s.anchorlookup.get(k).keySet().forEach((b) -> {
-                this.anchorlookup.get(k).put(b, s.anchorlookup.get(k).get(b));
-            });
+            this.SamTemp.get(k).combineTempFiles(s.SamTemp.get(k));
         });
     }
     
@@ -149,11 +148,11 @@ public class SamRecordMatcher extends TempDataClass {
         if(!this.buffer.isEmpty())
             this.dumpDataToDisk();
         
-        anchorlookup = new HashMap<>();
+        anchorlookup = new ConcurrentHashMap<>();
         try {
             this.SamTemp.keySet().parallelStream().forEach((String s) -> {
                 try{
-                TempFileSorter(splits.get(s), divets.get(s), s, SamTemp.get(s));
+                    TempFileSorter(splits.get(s), divets.get(s), s, SamTemp.get(s));
                 }catch(InterruptedException | IOException ex){
                     Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
                 }catch(Exception ex){
@@ -171,10 +170,10 @@ public class SamRecordMatcher extends TempDataClass {
 
     private void TempFileSorter(SplitOutputHandle splits, DivetOutputHandle divets, String rg, SamOutputHandle sam) throws InterruptedException, IOException, Exception {
         // Use Unix sort to sort the file by the multiple beginning columns
-        ProcessBuilder p = new ProcessBuilder("sort", "-k1,1", "-k2,2", "-k3,3n", sam.getTempFile().toString());
+        ProcessBuilder p = new ProcessBuilder("sort", "-k1,1", "-k2,2n", sam.getTempFile().toString());
         p.redirectError(new File("sort.error.log"));
         Process sort = p.start();
-        String line, lastrg = "none", last = "none";
+        String line, last = "none";
         String[] lastsegs = null;
         ArrayList<String[]> records = new ArrayList<>();
         BufferedReader input = new BufferedReader(new InputStreamReader(sort.getInputStream()));
@@ -188,15 +187,13 @@ public class SamRecordMatcher extends TempDataClass {
             String[] segs = line.split("\t");
             
             // clone name is not the same as the last one
-            if(!segs[1].equals(last)){
+            if(!segs[0].equals(last)){
                 if(!records.isEmpty()){
                     if(records.stream().anyMatch((s) -> isSplit(s))){
                         int scount = 0, acount = 0;
                         for(String[] r : records){
                             if(this.isAnchor(r)){
                                 splits.AddAnchor(r);
-                                if(r[1].equals("chr29-30796179-30796718-2:1:0-4:0:0-692a3"))
-                                    System.err.println("Anchor: " + StrUtils.StrArray.Join(r, "\t"));
                                 if(debug)
                                     this.debugWriter.write("Anchor\t" + StrUtils.StrArray.Join(r, "\t") + System.lineSeparator());
                                 acount++;
@@ -211,12 +208,12 @@ public class SamRecordMatcher extends TempDataClass {
                             // We had more than one split read, but no anchors
                             // Store the information we need to get the anchors next round
                             String[] temp = records.get(0);
-                            if(!anchorlookup.containsKey(temp[0]))
-                                anchorlookup.put(temp[0], new HashMap<>());
-                            anchorlookup.get(temp[0]).put(temp[1], this.flipCloneNum(Short.parseShort(temp[2])));
+                            if(!anchorlookup.containsKey(rg))
+                                anchorlookup.put(rg, new HashMap<>());
+                            anchorlookup.get(rg).put(temp[0], this.flipCloneNum(Short.parseShort(temp[1])));
                         }
                     }else if(records.size() > 1){
-                        Integer[] t = thresholds.get(lastrg);
+                        Integer[] t = thresholds.get(rg);
                         SamToDivet converter = new SamToDivet(last, t[0], t[1], t[2]);
                         records.stream().forEach((r) -> {
                             // Process the XAZTag if it exists
@@ -237,8 +234,7 @@ public class SamRecordMatcher extends TempDataClass {
             }
             lastsegs = segs;
             records.add(segs);
-            last = segs[1];
-            lastrg = segs[0];
+            last = segs[0];
         }
         divets.CloseHandle();
         splits.CloseFQHandle();
@@ -274,12 +270,14 @@ public class SamRecordMatcher extends TempDataClass {
                     r = new SAMReadGroupRecord(defId);
                 String rg = r.getId();
                 if(this.anchorlookup.containsKey(rg)){
+                    if(s.getReadName().matches("[_/]")){
+                        String initread = s.getReadName().replaceAll("[_/]", "-");
+                        s.setReadName(initread);
+                    }
                     String clone = rn.GetCloneName(s.getReadName(), s.getFlags());   
                     if(this.anchorlookup.get(rg).containsKey(clone)){
                         short num = rn.GetCloneNum(s.getReadName(), s.getFlags());
                         if(this.anchorlookup.get(rg).get(clone) == num){
-                            if(clone.equals("chr29-30796179-30796718-2:1:0-4:0:0-692a3"))
-                                System.err.println("Retrieved Anchor: " + s.getSAMString().trim());
                             splits.get(rg).AddAnchor(s);
                             anchorfound.put(clone, true);
                         }
@@ -314,15 +312,15 @@ public class SamRecordMatcher extends TempDataClass {
     }
     
     private boolean isSplit(String[] segs){
-        int fflags = Integer.parseInt(segs[4]);
-        Cigar c = TextCigarCodec.getSingleton().decode(segs[8]);
-        return (fflags & 0x8) == 0x8 || (fflags & 0x4) == 0x4 || isOverSoftClipThreshold(c, segs[12].length());
+        int fflags = Integer.parseInt(segs[3]);
+        Cigar c = TextCigarCodec.getSingleton().decode(segs[7]);
+        return (fflags & 0x8) == 0x8 || (fflags & 0x4) == 0x4 || isOverSoftClipThreshold(c, segs[11].length());
     }
     
     private boolean isAnchor(String[] segs){
-        int fflags = Integer.parseInt(segs[4]);
-        Cigar c = TextCigarCodec.getSingleton().decode(segs[8]);
-        return (fflags & 0x4) != 0x4 && (fflags & 0x8) == 0x8 && !segs[5].equals("*") && !isOverSoftClipThreshold(c, segs[12].length());
+        int fflags = Integer.parseInt(segs[3]);
+        Cigar c = TextCigarCodec.getSingleton().decode(segs[7]);
+        return (fflags & 0x4) != 0x4 && (fflags & 0x8) == 0x8 && !segs[4].equals("*") && !isOverSoftClipThreshold(c, segs[11].length());
     }
     
     private ArrayList<String[]> processXAZTag(String[] record){
@@ -351,10 +349,10 @@ public class SamRecordMatcher extends TempDataClass {
                         pos = pmatch.group(2);
                         // If the coordinate should be reversed, then subtract the read length from it
                         if(sign.equals("-"))
-                            pos = String.valueOf(Integer.valueOf(pos) - record[12].length());
+                            pos = String.valueOf(Integer.valueOf(pos) - record[11].length());
                         
-                        e[5] = tsegs[0];
-                        e[6] = pos;
+                        e[4] = tsegs[0];
+                        e[5] = pos;
                         // Add this alternative match to the array for return to the main program
                         entries.add(e);
                     }

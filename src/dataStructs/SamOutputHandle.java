@@ -32,7 +32,7 @@ public class SamOutputHandle extends TempDataClass{
     public SamOutputHandle(int threshold, String rg, String tmpoutname) {
         this.threshold = threshold;
         this.readGroup = rg;
-        this.createTemp(Paths.get(tmpoutname + "." + rg));
+        this.createTemp(Paths.get(tmpoutname + "." + rg + "."));
     }
     
     public void bufferedAdd(SAMRecord a, String clone, short num) {
@@ -56,7 +56,11 @@ public class SamOutputHandle extends TempDataClass{
             this.openTemp('A');
             String line;
             while((line = input.readLine()) != null){
+                line = line.trim();
+                
+                String[] segs = line.split("\t");
                 this.output.write(line);
+                this.output.newLine();
             }
             this.closeTemp('A');
         }catch(IOException ex){

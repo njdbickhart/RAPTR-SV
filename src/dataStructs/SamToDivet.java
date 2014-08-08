@@ -38,7 +38,7 @@ public class SamToDivet {
         Map<Short, ArrayList<String[]>> holder = new HashMap<>();
         // Put lines into temporary holder for numerical sorting
         for(String[] array : lines){
-            short num = Short.parseShort(array[2]);
+            short num = Short.parseShort(array[1]);
             if(!holder.containsKey(num))
                 holder.put(num, new ArrayList<String[]>());
             holder.get(num).add(array);
@@ -57,24 +57,26 @@ public class SamToDivet {
     // 20VQ5P1:104:D09KFACXX:7:2106:7435:121010:0      chr27   23699238        23699288        F       23695946        23695996        F       delinv  0       37.47  1.00000000000000000000   1
         
         for(String[] first : holder.get(comp)){
-            String forient, fchr = first[5], fstart = first[6], 
-                    fend = String.valueOf(Integer.parseInt(first[6]) + first[12].length()),
-                    fmdz = this.getMDZTag(first, first[12]);
+            String forient, fchr = first[4], fstart = first[5], 
+                    fend = String.valueOf(Integer.parseInt(first[5]) + first[11].length()),
+                    fmdz = this.getMDZTag(first, first[11]);
             int fedit = Integer.parseInt(this.getNMITag(first));
-            double fprob = stats.probBasedPhred.calculateScore(fmdz, first[13], first[13].length());
-            int fflags = Integer.parseInt(first[4]);
+            double fprob = stats.probBasedPhred.calculateScore(fmdz, first[11], first[11].length());
+            int fflags = Integer.parseInt(first[3]);
             if((fflags & 0x10) == 0x10)
                 forient = "R";
             else
                 forient = "F";
             
             for(String[] sec : holder.get(second)){
-                String sorient, schr = sec[5], sstart = sec[6], 
-                        send = String.valueOf(Integer.parseInt(sec[6]) + sec[12].length()),
-                        smdz = this.getMDZTag(sec, sec[12]);
+                if(sec[5].startsWith("chr"))
+                    System.out.println(StrUtils.StrArray.Join(sec, "\t"));
+                String sorient, schr = sec[4], sstart = sec[5], 
+                        send = String.valueOf(Integer.parseInt(sec[5]) + sec[11].length()),
+                        smdz = this.getMDZTag(sec, sec[11]);
                 int concordant = 0, sedit = Integer.parseInt(this.getNMITag(sec));
-                double sprob = stats.probBasedPhred.calculateScore(smdz, sec[13], sec[13].length());
-                int sflags = Integer.parseInt(sec[4]);
+                double sprob = stats.probBasedPhred.calculateScore(smdz, sec[12], sec[12].length());
+                int sflags = Integer.parseInt(sec[3]);
                 if((sflags & 0x10) == 0x10)
                     sorient = "R";
                 else
@@ -87,7 +89,7 @@ public class SamToDivet {
                 if(svcall.equals("concordant"))
                     continue;
                 
-                double avgphred = stats.calcAvgPhred.calcAvgPhred(first[13], sec[13]);
+                double avgphred = stats.calcAvgPhred.calcAvgPhred(first[12], sec[12]);
                 
                 divet d = new divet(clone, fchr, fstart, fend, forient, 
                         sstart, send, sorient, 

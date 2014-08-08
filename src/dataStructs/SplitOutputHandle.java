@@ -50,23 +50,25 @@ public class SplitOutputHandle {
         if(!fileopen)
             this.OpenAnchorHandle();
         SAMRecord sam = recordCreator.createSAMRecord(header);
-        sam.setReadName(segs[3]);
-        sam.setFlags(Integer.valueOf(segs[4]));
-        sam.setReferenceName(segs[5]);
-        sam.setAlignmentStart(Integer.valueOf(segs[6]));
+        sam.setReadName(segs[2]);
+        sam.setFlags(Integer.valueOf(segs[3]));
+        sam.setReferenceName(segs[4]);
+        sam.setAlignmentStart(Integer.valueOf(segs[5]));
         //sam.setAlignmentEnd(Integer.valueOf(segs[6]) + segs[12].length());
-        sam.setMappingQuality(Integer.valueOf(segs[7]));
-        sam.setCigarString(segs[8]);
-        sam.setMateReferenceName(segs[9]);
-        if(segs[9].equals("*"))
+        sam.setMappingQuality(Integer.valueOf(segs[6]));
+        sam.setCigarString(segs[7]);
+        sam.setMateReferenceName(segs[8]);
+        if(segs[8].equals("*"))
             sam.setMateAlignmentStart(0);
         else
-            sam.setMateAlignmentStart(Integer.valueOf(segs[10]));
-        sam.setInferredInsertSize(Integer.valueOf(segs[11]));
-        sam.setReadString(segs[12]);
-        sam.setBaseQualityString(segs[13]);
-        for(int i = 14; i < segs.length; i++){
+            sam.setMateAlignmentStart(Integer.valueOf(segs[9]));
+        sam.setInferredInsertSize(Integer.valueOf(segs[10]));
+        sam.setReadString(segs[11]);
+        sam.setBaseQualityString(segs[12]);
+        for(int i = 13; i < segs.length; i++){
             String[] tags = segs[i].split(":");
+            if(tags[0].equals("OQ"))
+                continue; // This is a pretty extraneous field and it serves just to bulk up the BAM file
             if(StrUtils.NumericCheck.isNumeric(tags[2]) && !tags[0].equals("MD"))
                 sam.setAttribute(tags[0], Integer.parseInt(tags[2]));
             else if(StrUtils.NumericCheck.isFloating(tags[2]))
@@ -85,21 +87,21 @@ public class SplitOutputHandle {
     
     public synchronized void AddSplit(String[] segs){
         String nl = System.lineSeparator();
-        String rn1 = "@" + segs[3] + "_1";
-        String rn2 = "@" + segs[3] + "_2";
+        String rn1 = "@" + segs[2] + "_1";
+        String rn2 = "@" + segs[2] + "_2";
         
-        int len = segs[12].length();
+        int len = segs[11].length();
         //int splitter = firstSplitSeg(segs[8], len);
         // TODO: Unfortunately, Mrsfast does not allow for split read alignment of
         // variable length reads. I will have to implement a side method that 
         // processes the reads differently based on their length
         int splitter = Math.floorDiv(len, 2);
         
-        String tS1 = segs[12].substring(0, splitter);
-        String tS2 = segs[12].substring(splitter, splitter * 2);
+        String tS1 = segs[11].substring(0, splitter);
+        String tS2 = segs[11].substring(splitter, splitter * 2);
 
-        String tQ1 = segs[13].substring(0, splitter);
-        String tQ2 = segs[13].substring(splitter, splitter * 2);
+        String tQ1 = segs[12].substring(0, splitter);
+        String tQ2 = segs[12].substring(splitter, splitter * 2);
         
         try {
             fq1.write(rn1 + nl + tS1 + nl + "+" + nl + tQ1 + nl);

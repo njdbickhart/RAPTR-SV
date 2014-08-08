@@ -55,9 +55,12 @@ public class BamMetadataGeneration {
         if(!sam.hasIndex()){
             System.out.println("[METADATA] Could not find bam index file. Creating one now...");
             BAMIndexer b = new BAMIndexer(new File(input + ".bai"), sam.getFileHeader());
-            sam.iterator().forEachRemaining((s) -> b.processAlignment(s));
+            sam.enableFileSource(true);
+            sam.iterator().forEachRemaining((s) -> {
+                b.processAlignment(s);});
             b.finish();
             sam.close();
+            System.out.println("[METADATA] Finished with bam index generation.");
             sam = new SAMFileReader(new File(input));
         }
         sam.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);

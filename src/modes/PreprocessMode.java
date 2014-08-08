@@ -88,14 +88,31 @@ public class PreprocessMode {
         SAMFileHeader h = reader.getFileHeader();
         List<BedSimple> coords = this.getSamIntervals(h);
         
-        SamRecordMatcher worker = coords.parallelStream()
+        List<SamRecordMatcher> collect = coords.parallelStream()
                 .map((b) -> {
-                    SAMRecordIterator itr = reader.queryContained(b.Chr(), b.Start(), b.End());
-                    SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
-                    itr.forEachRemaining((k) -> w.bufferedAdd(k));
+                    SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug);
+                    try{
+                        SAMFileReader temp = new SAMFileReader(new File(input));
+                        temp.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
+                        SAMRecordIterator itr = temp.queryContained(b.Chr(), b.Start(), b.End());
+                        itr.forEachRemaining((k) -> w.bufferedAdd(k));
+                        temp.close();
+                        System.out.print("                                                                                        \r");
+                        System.out.print("[SAMRECORD] Working on SAM chunk: " + b.Chr() + "\t" + b.Start() + "\t" + b.End() + "\r");
+                    }catch(Exception ex){
+                        System.err.println("[SAMRECORD] Error with SAM query for: " + b.Chr() + "\t" + b.Start() + "\t" + b.End());
+                        ex.printStackTrace();
+                    }
                     return w;
-                }).reduce(new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug), (SamRecordMatcher a, SamRecordMatcher b) -> {a.combineRecordMatcher(b); return a;});
+                }).collect(Collectors.toList());
+                //.reduce(new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug), (SamRecordMatcher a, SamRecordMatcher b) -> {a.combineRecordMatcher(b); return a;});
         
+        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug);
+        collect.stream().forEachOrdered((s) -> {
+            worker.combineRecordMatcher(s);
+        });
+        reader.close();
+        System.out.println(System.lineSeparator() + "[PREPROCESS] Working on Variant calling from SAM data.");
         /*SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
         SAMRecordIterator itr = reader.iterator();
         while(itr.hasNext()){
@@ -111,8 +128,10 @@ public class PreprocessMode {
         }
         itr.close();*/
         
+        SAMFileReader next = new SAMFileReader(new File(input));
+        next.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
         worker.convertToVariant(divets, splits);
-        worker.RetrieveMissingAnchors(splits, reader.iterator());
+        worker.RetrieveMissingAnchors(splits, next.iterator());
         
         System.err.println("[PREPROCESS] Generated initial split and divet data.");
         // Run MrsFAST on the split fastqs and generate bam files
@@ -151,22 +170,26 @@ public class PreprocessMode {
     
     private List<BedSimple> getSamIntervals(SAMFileHeader h){
         List<BedSimple> coords = new ArrayList<>();
-        coords = h.getSequenceDictionary().getSequences().stream().flatMap((s) -> {
+        coords = h.getSequenceDictionary().getSequences().stream().map((s) -> {
             String chr = s.getSequenceName();
             int len = s.getSequenceLength();
-            List<BedSimple> temp = new ArrayList<>();
-            if(len < 1000000){
-                temp.add(new BedSimple(chr, 0, len));
-                return temp.stream();
+            //List<BedSimple> temp = new ArrayList<>();
+            /*if(len < 1000000){
+            temp.add(new BedSimple(chr, 0, len));
+            return temp.stream();
             }else{
-                for(int x = 0; x < len; x += 1000000){
-                    if(x + 1000000 > len)
-                        temp.add(new BedSimple(chr, x, len));
-                    else
-                        temp.add(new BedSimple(chr, x, x + 1000000));
-                }
-                return temp.stream();
+            for(int x = 0; x < len; x += 1000000){
+            if(x + 1000000 > len)
+            temp.add(new BedSimple(chr, x, len));
+            else
+            temp.add(new BedSimple(chr, x, x + 1000000));
             }
+            return temp.stream();
+            }*/
+            // I changed this to chromosome lengths in order to avoid instances where
+            // reads that mapped on the peripheries of query sites would be lost
+            // in the queried samiterator object
+            return new BedSimple(chr, 0, len);
         }).collect(Collectors.toList());
         return coords;
     }

@@ -160,10 +160,10 @@ public class BufferedSetReader {
                     continue;
                 String end = String.valueOf(Integer.parseInt(segs[3]) + segs[9].length());
                 anchorRead aR = new anchorRead(segs[2], segs[3], end, segs[0], segs[1], segs[11], segs[12], segs[10]);
-                String clone = rn.GetCloneName(segs[0], Integer.valueOf(segs[1]));
-                appendAnchorToConstruct(anchors, aR, clone);
+                //String clone = rn.GetCloneName(segs[0], Integer.valueOf(segs[1]));
+                appendAnchorToConstruct(anchors, aR, segs[0]);
                 
-                this.anchorMaps.addRead(clone);
+                this.anchorMaps.addRead(segs[0]);
             }
         //}catch(IOException ex){
             //Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
