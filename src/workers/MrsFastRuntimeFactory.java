@@ -94,6 +94,8 @@ public class MrsFastRuntimeFactory{
                     if(line.length() < 10)
                         continue; // This was an empty line from flawed logic
                     String[] segs = line.split("\t");
+                    if(segs.length < 9)
+                        continue;
                     if(segs[9].length() != segs[10].length())
                         continue; // This was an alignment error.
                     SAMRecord sam = recordCreator.createSAMRecord(header);
