@@ -69,12 +69,19 @@ public class SplitOutputHandle {
             String[] tags = segs[i].split(":");
             if(tags[0].equals("OQ"))
                 continue; // This is a pretty extraneous field and it serves just to bulk up the BAM file
-            if(StrUtils.NumericCheck.isNumeric(tags[2]) && !tags[0].equals("MD"))
-                sam.setAttribute(tags[0], Integer.parseInt(tags[2]));
-            else if(StrUtils.NumericCheck.isFloating(tags[2]))
-                sam.setAttribute(tags[0], Float.parseFloat(tags[2]));
-            else
-                sam.setAttribute(tags[0], tags[2]);
+            switch(tags[1]){
+                case "A":
+                case "Z":
+                case "B":
+                    sam.setAttribute(tags[0], tags[2]);
+                    break;
+                case "i":
+                    sam.setAttribute(tags[0], Integer.parseInt(tags[2]));
+                    break;
+                case "f":
+                    sam.setAttribute(tags[0], Float.parseFloat(tags[2]));
+                    break;
+            }
         }
         anchorOut.addAlignment(sam);
     }
