@@ -110,6 +110,8 @@ public class BufferedSetReader {
             String[] segs;
             while((line = divetReader.readLine()) != null){
                 segs = line.split("\t");
+                if(segs.length < 12)
+                    continue;
                 divMaps.addRead(segs[0].trim());
                 
                 if(!(segs[1].equals(this.chr))){

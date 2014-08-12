@@ -37,29 +37,37 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
     }
     
     public boolean checkAndCombineSets(T bed){
-       if(this.containsChr(bed.Chr())){
+        boolean found = false;
+        if(this.containsChr(bed.Chr())){
             for(int b : utils.BinBed.getBins(bed.innerStart, bed.innerEnd)){
                 if(this.containsBin(bed.Chr(), b)){
                     for(T set : this.getBedAbstractList(bed.Chr(), b)){
-                        if(setOverlaps(set, bed)){
-                            set.mergeBedSet(bed);
-                            return true;
-                        }
+                            if(setOverlaps(set, bed)){
+                                // Only add the bed to the set if it overlaps interior coordinates
+                                // Otherwise, skip it!
+                                found = true;
+                                set.mergeBedSet(bed);
+                            }
                     }
                 }
             }
         }
-       this.addBedData(bed);
-       return false;
+        if(!found)
+            this.addBedData(bed);
+        return found;
+    }
+    
+    private boolean exteriorOverlap(T a, T b){
+        return((a.Start() < b.End()
+                && a.End() > b.Start())
+                && svTypeConsistency(a.svType, b.svType));
     }
     
     private boolean setOverlaps(T a, T b){
-        if((a.innerStart < b.innerEnd
+        return((a.innerStart < b.innerEnd
                 && a.innerEnd > b.innerStart)
-                && svTypeConsistency(a.svType, b.svType)){
-            return true;
-        }
-        return false;
+                && svTypeConsistency(a.svType, b.svType)
+                && !(b.innerStart >= a.innerStart || b.innerEnd <= a.innerEnd));
     }
     public ArrayList<BedSet> getUnsortedBedList(String chr){
         List<BedSet> working = this.getBins(chr)

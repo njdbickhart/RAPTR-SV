@@ -92,16 +92,26 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         if(b.getReadFlags().contains(readEnum.IsDisc)){
             if((this.start <= b.getInnerStart() && this.innerStart >= b.Start())
                     && (this.innerEnd <= b.End() && this.End() >= b.getInnerEnd())
-                    //&& !this.makesReadRegionTooLong(start, innerStart, b.Start(), b.getInnerStart(), this.innerEnd - this.innerStart)
-                    //&& !this.makesReadRegionTooLong(innerEnd, end, b.getInnerEnd(), b.End(), this.innerEnd - this.innerStart)
+                    && this.splitSup == -1
+                    && !(b.innerStart >= this.innerStart || b.innerEnd <= this.innerEnd)
+                    && !this.makesReadRegionTooLong(start, innerStart, b.Start(), b.getInnerStart(), (b.innerStart - b.Start()))
+                    && !this.makesReadRegionTooLong(innerEnd, end, b.getInnerEnd(), b.End(), (b.innerStart - b.Start()))
                     && svTypeConsistency(this.svType, b.getSVType())){
                 // Discordant read overlap
                 return true;
+            }else if((this.start <= b.getInnerStart() && this.innerStart >= b.Start())
+                    && (this.innerEnd <= b.End() && this.End() >= b.getInnerEnd())
+                    && this.splitSup >= -1
+                    && !(b.innerStart >= this.innerStart || b.innerEnd <= this.innerEnd)
+                    && svTypeConsistency(this.svType, b.getSVType())){
+                // Discordant read mapping to set with split reads
+                return true;
             }
         }else if(b.getReadFlags().contains(readEnum.IsSplit)){
-            if((this.innerStart < b.innerEnd
-                && this.innerEnd > b.innerStart)
+            if((this.innerStart < b.innerStart
+                && this.innerEnd > b.innerEnd)
                 && svTypeConsistency(this.svType, b.getSVType())
+                && b.innerEnd - b.innerStart > 0
                 && divSup > -1
                 && splitSup == -1 ){
                 // Split read overlap with divet read pair
@@ -172,7 +182,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     private boolean makesReadRegionTooLong(int s1, int s2, int e1, int e2, int insert){
         int[] i = {s1, s2, e1, e2};
         Arrays.sort(i);
-        return (i[3] - i[0] > insert * 10);
+        return (i[3] - i[0] > insert * 2);
     }
     
     private void refineStartCoords(int ... a){

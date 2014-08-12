@@ -132,8 +132,11 @@ public class weightCoverEvents{
             
             removal += remover.size();
             for(BufferedInitialSet r : remover){
+                r.deleteTemp();
                 this.inputSets.remove(r);
             }
+            
+            System.gc();
             
             /*for(int i = 0; i < this.inputSets.size(); i++){
             this.inputSets.get(i).reCalculateValues(names);
