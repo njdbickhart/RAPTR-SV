@@ -73,7 +73,6 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      */
     protected HashMap<String, Integer> readNames = new HashMap<>();
     
-    
     /**
      * Adds a ReadPair object to this container and modifies the coordinates appropriately
      * @param bed A ReadPair object
@@ -92,19 +91,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         if(b.getReadFlags().contains(readEnum.IsDisc)){
             if((this.start <= b.getInnerStart() && this.innerStart >= b.Start())
                     && (this.innerEnd <= b.End() && this.End() >= b.getInnerEnd())
-                    && this.splitSup == -1
                     && !(b.innerStart >= this.innerStart || b.innerEnd <= this.innerEnd)
-                    && !this.makesReadRegionTooLong(start, innerStart, b.Start(), b.getInnerStart(), (b.innerStart - b.Start()))
-                    && !this.makesReadRegionTooLong(innerEnd, end, b.getInnerEnd(), b.End(), (b.innerStart - b.Start()))
+                    //&& !this.makesReadRegionTooLong(start, innerStart, b.Start(), b.getInnerStart(), (b.innerStart - b.Start()))
+                    //&& !this.makesReadRegionTooLong(innerEnd, end, b.getInnerEnd(), b.End(), (b.innerStart - b.Start()))
                     && svTypeConsistency(this.svType, b.getSVType())){
                 // Discordant read overlap
-                return true;
-            }else if((this.start <= b.getInnerStart() && this.innerStart >= b.Start())
-                    && (this.innerEnd <= b.End() && this.End() >= b.getInnerEnd())
-                    && this.splitSup >= -1
-                    && !(b.innerStart >= this.innerStart || b.innerEnd <= this.innerEnd)
-                    && svTypeConsistency(this.svType, b.getSVType())){
-                // Discordant read mapping to set with split reads
                 return true;
             }
         }else if(b.getReadFlags().contains(readEnum.IsSplit)){
@@ -182,7 +173,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     private boolean makesReadRegionTooLong(int s1, int s2, int e1, int e2, int insert){
         int[] i = {s1, s2, e1, e2};
         Arrays.sort(i);
-        return (i[3] - i[0] > insert * 2);
+        return (i[3] - i[0] > insert * 4);
     }
     
     private void refineStartCoords(int ... a){
@@ -239,7 +230,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         this.refineEndCoords(this.end, this.innerEnd, a[2], a[3]);
         this.svType = (this.svType == null)? bedSet.svType : this.svType;
         
-        bedSet.restoreAll();
+        bedSet.readSequentialFile();
         bedSet.pairs.stream().forEach((r) -> {
             this.bufferedAdd(r);
         });
@@ -261,29 +252,31 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      */
     @Override
     public void readSequentialFile() {
-        this.openTemp('R');
-        try{
-            String line;
-            while((line = this.handle.readLine()) != null){
-                line = line.trim();
-                String[] segs = line.split("\t");
-                ReadPair temp = new ReadPair(segs);
-                //if(temp.getReadFlags().contains(readEnum.IsSplit))
-                    //this.splitSup += 1;
-                if(temp.getReadFlags().contains(readEnum.IsUnbalanced)){
-                    //this.unbalSplit += 1;
-                    this.sumUnbalSupport += (double) 1 / (double) Integer.parseInt(segs[8]);
+        if(this.hasTemp()){
+            this.openTemp('R');
+            try{
+                String line;
+                while((line = this.handle.readLine()) != null){
+                    line = line.trim();
+                    String[] segs = line.split("\t");
+                    ReadPair temp = new ReadPair(segs);
+                    if(temp.getReadFlags().contains(readEnum.IsSplit))
+                        this.splitSup += 1;
+                    if(temp.getReadFlags().contains(readEnum.IsUnbalanced)){
+                        //this.unbalSplit += 1;
+                        this.sumUnbalSupport += (double) 1 / (double) Integer.parseInt(segs[8]);
+                    }
+                    if(temp.getReadFlags().contains(readEnum.IsDisc))
+                        this.divSup += 1;
+                    this.readNames.put(segs[0], Integer.parseInt(segs[8]));
+                    this.pairs.add(temp);
                 }
-                //if(temp.getReadFlags().contains(readEnum.IsDisc))
-                    //this.divSup += 1;
-                this.readNames.put(segs[0], Integer.parseInt(segs[8]));
+            }catch(IOException ex){
+                java.util.logging.Logger.getLogger(BufferedInitialSet.class.getName()).log(Level.SEVERE, null, ex);
+            }finally{
+                this.closeTemp('R');
             }
-        }catch(IOException ex){
-            java.util.logging.Logger.getLogger(BufferedInitialSet.class.getName()).log(Level.SEVERE, null, ex);
-        }finally{
-            this.closeTemp('R');
         }
-        
     }
 
     /**
@@ -307,7 +300,12 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     @Override
     public <BedAbstract> void bufferedAdd(BedAbstract a) {
         if(this.pairs.size() >= this.maxBuffer){
-            this.dumpDataToDisk();            
+            if(this.hasTemp())
+                this.dumpDataToDisk();
+            else{
+                this.createTemp(tempFile);
+                this.dumpDataToDisk();
+            }
         }
         this.rawReads += 1;
         ReadPair working = (ReadPair)a;
@@ -390,7 +388,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
             this.divSup = 0;
         if(this.unbalSplit == -1)
             this.unbalSplit = 0;
-        this.readSequentialFile();
+        this.restoreAll();
         
     }
     private void populateCalculations(HashSet<String> names){

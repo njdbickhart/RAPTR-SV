@@ -301,7 +301,7 @@ public class SamRecordMatcher extends TempDataClass {
     }
     
     private boolean isOverSoftClipThreshold(Cigar c, int readLength){
-        return getCigarSoftClips(c) > readLength * 0.20d;
+        return getCigarSoftClips(c) > readLength * 0.30d;
     }
     
     private int getCigarSoftClips(Cigar c){
@@ -314,7 +314,7 @@ public class SamRecordMatcher extends TempDataClass {
     private boolean isSplit(String[] segs){
         int fflags = Integer.parseInt(segs[3]);
         Cigar c = TextCigarCodec.getSingleton().decode(segs[7]);
-        return (fflags & 0x8) == 0x8 || (fflags & 0x4) == 0x4 || isOverSoftClipThreshold(c, segs[11].length());
+        return (((fflags & 0x4) == 0x4 && (fflags & 0x8) != 0x8)|| isOverSoftClipThreshold(c, segs[11].length()));
     }
     
     private boolean isAnchor(String[] segs){

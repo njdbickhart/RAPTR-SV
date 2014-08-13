@@ -42,12 +42,13 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
             for(int b : utils.BinBed.getBins(bed.innerStart, bed.innerEnd)){
                 if(this.containsBin(bed.Chr(), b)){
                     for(T set : this.getBedAbstractList(bed.Chr(), b)){
-                            if(setOverlaps(set, bed)){
-                                // Only add the bed to the set if it overlaps interior coordinates
-                                // Otherwise, skip it!
-                                found = true;
-                                set.mergeBedSet(bed);
-                            }
+                        if(setOverlaps(set, bed)){
+                            found = true;
+                            if((bed.innerStart >= set.innerStart || bed.innerEnd <= set.innerEnd))
+                                set.mergeBedSet(bed);// Only add the bed to the set if does not scrunch coordinates
+                            // Otherwise, skip it!
+                            break;
+                        }
                     }
                 }
             }
@@ -66,8 +67,7 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
     private boolean setOverlaps(T a, T b){
         return((a.innerStart < b.innerEnd
                 && a.innerEnd > b.innerStart)
-                && svTypeConsistency(a.svType, b.svType)
-                && !(b.innerStart >= a.innerStart || b.innerEnd <= a.innerEnd));
+                && svTypeConsistency(a.svType, b.svType));
     }
     public ArrayList<BedSet> getUnsortedBedList(String chr){
         List<BedSet> working = this.getBins(chr)
