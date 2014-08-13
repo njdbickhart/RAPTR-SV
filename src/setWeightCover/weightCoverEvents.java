@@ -136,8 +136,6 @@ public class weightCoverEvents{
                 this.inputSets.remove(r);
             }
             
-            System.gc();
-            
             /*for(int i = 0; i < this.inputSets.size(); i++){
             this.inputSets.get(i).reCalculateValues(names);
             // Removes all sets that have less than 1 supporting read (and mapping quality)

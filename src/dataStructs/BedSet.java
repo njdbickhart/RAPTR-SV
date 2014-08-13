@@ -284,6 +284,8 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      */
     @Override
     public void dumpDataToDisk() {
+        if(!this.hasTemp())
+            this.createTemp(tempFile);
         this.openTemp('A');
         try{
             for(ReadPair a : this.pairs){
@@ -349,7 +351,12 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      */
     @Override
     public void restoreAll() {
-        if(this.hasTemp() && this.readNames.isEmpty()){
+        if(this.readNames.isEmpty()){
+            for(ReadPair r : this.pairs){
+                this.readNames.put(r.Name(), r.mapcount);
+            }
+        }
+        if(this.hasTemp()){
             this.openTemp('R');
             try{
                 String line;
@@ -399,7 +406,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
                 this.sumFullSupport += (double) 1 / (double) this.readNames.get(r);
             }
         }
-        this.dumpDataToDisk();
+        //this.dumpDataToDisk();
     }
     
     /*

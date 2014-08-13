@@ -17,16 +17,14 @@ public class anchorRead extends BedAbstract{
     protected boolean forward; // true = forward, false = reverse
     private double probPhred;
     
-    public anchorRead(String chr, String start, String end, String readName, String samFlag, String nmTag, String mmTag, String qual){
-        try {
-            initialVals(chr, start, end);
-            this.name = readName;
-        } catch (BedFileException ex) {
-            Logger.getLogger(anchorRead.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        this.forward = !samFlag.equals("16");
-        String[] mm = mmTag.split(":");
-        calcProbs(qual, mm[2]);
+    public anchorRead(String chr, int start, int end, String readName, int samFlag, String mdVal, String qual){
+        
+        this.chr = chr;
+        this.start = start;
+        this.end = end;
+        this.name = readName;
+        this.forward = samFlag == 0;
+        calcProbs(qual, mdVal);
     }
     
     @Override

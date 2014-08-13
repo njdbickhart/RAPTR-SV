@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordIterator;
@@ -151,21 +152,25 @@ public class BufferedSetReader {
         //try{
             //String line;
             SAMRecordIterator itr = sam.iterator();
-            String[] segs;
             while(itr.hasNext()){
                 SAMRecord rec = itr.next();
-                segs = rec.getSAMString().split("\t");
-                if(!(segs[2].equals(this.chr))){
+                if(!(rec.getReferenceName().equals(this.chr))){
                     continue;
                 }
-                if(segs.length < 13)
+                Set<String> tags = rec.getAttributes().stream().map((s) -> {return s.tag;}).collect(Collectors.toSet());
+                if(!tags.contains("MD"))
                     continue;
-                String end = String.valueOf(Integer.parseInt(segs[3]) + segs[9].length());
-                anchorRead aR = new anchorRead(segs[2], segs[3], end, segs[0], segs[1], segs[11], segs[12], segs[10]);
+                anchorRead aR = new anchorRead(rec.getReferenceName(),
+                    rec.getAlignmentStart(),
+                    rec.getAlignmentEnd(),
+                    rec.getReadName(),
+                    rec.getFlags(),
+                    String.valueOf(rec.getAttribute("MD")),
+                    rec.getBaseQualityString());
                 //String clone = rn.GetCloneName(segs[0], Integer.valueOf(segs[1]));
-                appendAnchorToConstruct(anchors, aR, segs[0]);
+                appendAnchorToConstruct(anchors, aR, rec.getReadName());
                 
-                this.anchorMaps.addRead(segs[0]);
+                this.anchorMaps.addRead(rec.getReadName());
             }
         //}catch(IOException ex){
             //Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);

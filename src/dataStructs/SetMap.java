@@ -44,7 +44,7 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
                     for(T set : this.getBedAbstractList(bed.Chr(), b)){
                         if(setOverlaps(set, bed)){
                             found = true;
-                            if((bed.innerStart >= set.innerStart || bed.innerEnd <= set.innerEnd))
+                            if(bed.innerEnd > set.innerStart)
                                 set.mergeBedSet(bed);// Only add the bed to the set if does not scrunch coordinates
                             // Otherwise, skip it!
                             break;
