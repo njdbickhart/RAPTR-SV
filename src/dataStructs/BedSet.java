@@ -88,6 +88,9 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      * @return
      */
     public boolean pairOverlaps(ReadPair b){
+        if(this.makesReadRegionTooLong(start, innerStart, b.Start(), b.getInnerStart(), (b.innerStart - b.Start()))
+                || this.makesReadRegionTooLong(innerEnd, end, b.getInnerEnd(), b.End(), (b.innerStart - b.Start())))
+            return false; // Added in to prevent logic that expanded read uncertainty regions because of overlapping exterior coordinates
         if(b.getReadFlags().contains(readEnum.IsDisc)){
             if((this.start <= b.getInnerStart() && this.innerStart >= b.Start())
                     && (this.innerEnd <= b.End() && this.End() >= b.getInnerEnd())
@@ -173,7 +176,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     private boolean makesReadRegionTooLong(int s1, int s2, int e1, int e2, int insert){
         int[] i = {s1, s2, e1, e2};
         Arrays.sort(i);
-        return (i[3] - i[0] > insert * 4);
+        return (i[3] - i[0] > insert * 100);
     }
     
     private void refineStartCoords(int ... a){

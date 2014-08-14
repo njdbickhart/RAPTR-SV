@@ -6,6 +6,7 @@ package dataStructs;
 
 import file.BedMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -67,7 +68,15 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
     private boolean setOverlaps(T a, T b){
         return((a.innerStart < b.innerEnd
                 && a.innerEnd > b.innerStart)
+                && !makesReadRegionTooLong(a.Start(), a.innerStart, b.Start(), b.innerStart, 200)
+                && !makesReadRegionTooLong(a.innerEnd, a.End(), b.innerEnd, b.End(), 200)
                 && svTypeConsistency(a.svType, b.svType));
+    }
+    
+    private boolean makesReadRegionTooLong(int s1, int s2, int e1, int e2, int insert){
+        int[] i = {s1, s2, e1, e2};
+        Arrays.sort(i);
+        return (i[3] - i[0] > insert * 100);
     }
     public ArrayList<BedSet> getUnsortedBedList(String chr){
         List<BedSet> working = this.getBins(chr)
