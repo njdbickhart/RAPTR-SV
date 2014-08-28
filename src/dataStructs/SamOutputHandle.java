@@ -42,7 +42,6 @@ public class SamOutputHandle extends TempDataClass{
             buffer.get(clone).put(num, new ArrayList<SAMRecord>());
         buffer.get(clone).get(num).add(a);
         overhead++;
-        
         if(overhead >= threshold){
             dumpDataToDisk();
             overhead = 0;
@@ -50,9 +49,11 @@ public class SamOutputHandle extends TempDataClass{
     }
     
     public void combineTempFiles(SamOutputHandle s){
+        s.dumpDataToDisk();
         try(BufferedReader input = Files.newBufferedReader(s.getTempFile(), Charset.defaultCharset())){
             if(!this.buffer.isEmpty())
                 this.dumpDataToDisk();
+            
             this.openTemp('A');
             String line;
             while((line = input.readLine()) != null){

@@ -65,6 +65,6 @@ public class DivetOutputHandle {
     }
     
     public String getDivetFileStr(){
-        return this.path.toString();
+        return this.path.toAbsolutePath().toString();
     }
 }

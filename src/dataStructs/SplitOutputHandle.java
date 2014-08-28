@@ -171,6 +171,6 @@ public class SplitOutputHandle {
     }
     
     public String getAnchorFileStr(){
-        return this.anchorpath.toString();
+        return this.anchorpath.toAbsolutePath().toString();
     }
 }

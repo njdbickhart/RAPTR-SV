@@ -70,7 +70,9 @@ public class MrsFastRuntimeFactory{
                 samfiles.put(rg, samstr);
                 Runnable r = processStringsToRecords(FileHeader, outbase, rg, samstr);
                 r.run();
-                bamfiles.put(rg, outbase + "." + rg + ".bam");
+                
+                // This logic should give the absolute path name when creating the flatfile
+                bamfiles.put(rg, Paths.get(outbase).toAbsolutePath().toString() + "." + rg + ".bam");
                 //ex.submit(r);
             } catch (InterruptedException | ExecutionException ex1) {
                 Logger.getLogger(MrsFastRuntimeFactory.class.getName()).log(Level.SEVERE, null, ex1);

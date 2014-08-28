@@ -132,6 +132,20 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         }
         return false;
     }
+    /*protected boolean splitCoordConsistency(this.svType, ReadPair b){
+    if(svTypeConsistency(this.svType, b.getSVType())){
+    switch(this.svType){
+    case TANDEM:
+    case INSINV:
+    return (this.splitSup == -1
+    && b.innerStart <= this.Start()
+    && b.innerEnd >= this.End()
+    && !makesReadRegionTooLong())
+    }
+    }
+    return false;
+    }*/
+    
     /**
      * Determines if a ReadPair overlaps with this candidate SV
      * @param rflags

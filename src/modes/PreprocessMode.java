@@ -20,6 +20,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.sf.samtools.SAMFileHeader;
@@ -89,25 +91,32 @@ public class PreprocessMode {
         List<BedSimple> coords = this.getSamIntervals(h);
         
         List<SamRecordMatcher> collect = coords.parallelStream()
-                .map((b) -> {
-                    SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug);
-                    try{
-                        SAMFileReader temp = new SAMFileReader(new File(input));
-                        temp.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
-                        SAMRecordIterator itr = temp.queryContained(b.Chr(), b.Start(), b.End());
-                        itr.forEachRemaining((k) -> w.bufferedAdd(k));
-                        temp.close();
-                        System.out.print("                                                                                        \r");
-                        System.out.print("[SAMRECORD] Working on SAM chunk: " + b.Chr() + "\t" + b.Start() + "\t" + b.End() + "\r");
-                    }catch(Exception ex){
-                        System.err.println("[SAMRECORD] Error with SAM query for: " + b.Chr() + "\t" + b.Start() + "\t" + b.End());
-                        ex.printStackTrace();
-                    }
-                    return w;
-                }).collect(Collectors.toList());
+        .map((b) -> {
+            SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
+            try{
+                SAMFileReader temp = new SAMFileReader(new File(input));
+                temp.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
+                SAMRecordIterator itr = temp.queryContained(b.Chr(), b.Start(), b.End());
+                itr.forEachRemaining((k) -> w.bufferedAdd(k));
+                temp.close();
+                System.out.print("                                                                                        \r");
+                System.out.print("[SAMRECORD] Working on SAM chunk: " + b.Chr() + "\t" + b.Start() + "\t" + b.End() + "\r");
+            }catch(Exception ex){
+                System.err.println("[SAMRECORD] Error with SAM query for: " + b.Chr() + "\t" + b.Start() + "\t" + b.End());
+                ex.printStackTrace();
+            }
+        return w;
+        }).collect(Collectors.toList());
                 //.reduce(new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug), (SamRecordMatcher a, SamRecordMatcher b) -> {a.combineRecordMatcher(b); return a;});
         
-        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug);
+        System.out.println("Pausing for debug");
+        try {
+            Thread.sleep(4000);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(PreprocessMode.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
         collect.stream().forEachOrdered((s) -> {
             worker.combineRecordMatcher(s);
         });

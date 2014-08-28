@@ -57,16 +57,16 @@ public class ClusterMode {
         finalEvents.run();
         
         // Output results
-        OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), outBase + ".vhsr.insertions", debug);
+        OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), outBase + ".rpsr.insertions", debug);
         insertions.WriteOut();
         
-        OutputEvents deletions = new OutputEvents(finalEvents.RetDel(), outBase + ".vhsr.deletions", debug);
+        OutputEvents deletions = new OutputEvents(finalEvents.RetDel(), outBase + ".rpsr.deletions", debug);
         deletions.WriteOut();
         
-        OutputEvents tanddup = new OutputEvents(finalEvents.RetTand(), outBase + ".vhsr.tand", debug);
+        OutputEvents tanddup = new OutputEvents(finalEvents.RetTand(), outBase + ".rpsr.tand", debug);
         tanddup.WriteOut();
         
-        OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), outBase + ".vhsr.inversions");
+        OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), outBase + ".rpsr.inversions");
         inversions.WriteOut();
         System.exit(0);
     }

@@ -72,6 +72,7 @@ public class SamRecordMatcher extends TempDataClass {
     public void bufferedAdd(SAMRecord a) {
         // Check if we should add this one
         // We want to avoid optical duplicates and otherwise marked "bad" reads
+        String rname = a.getReadName();
         int rgflags = a.getFlags();
         if(((rgflags & 0x4) == 0x4 && (rgflags & 0x8) == 0x8))
             return; // read pair did not map at all
