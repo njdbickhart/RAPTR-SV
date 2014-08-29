@@ -51,14 +51,16 @@ public class BufferedSetReader {
     private final readNameMappings anchorMaps = new readNameMappings();
     private GapOverlap gaps;
     private final ReadNameUtility rn = new ReadNameUtility();
+    private final double pfilter;
     
-    public BufferedSetReader(String flatFile, String gapFile, String chr, int buffer){
+    public BufferedSetReader(String flatFile, String gapFile, String chr, int buffer, double pfilter){
         // First, let's load the data file locations and create the gap intersection
         // tool.
         this.buffer = buffer;
         this.chr = chr;
         this.identifyFiles(flatFile);
         this.createGapOverlapTool(gapFile);
+        this.pfilter = pfilter;
         
         int numLines = this.fileEntries.size();
         int counter = 0;
@@ -118,7 +120,7 @@ public class BufferedSetReader {
                 if(!(segs[1].equals(this.chr))){
                     continue;
                 }
-                if(!segs[12].equals("1") && Double.valueOf(segs[11]) > 0.001){
+                if(!segs[12].equals("1") && Double.valueOf(segs[11]) > pfilter){
                     ReadPair rp = new ReadPair(line, file, readEnum.IsDisc);
                     tempholder.add(rp);
                 }

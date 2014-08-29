@@ -69,7 +69,7 @@ public class RPSRmain {
                 + "\t-c\tChromosome to be processed" + nl
                 + "\t-g\tAssembly Gap bed file" + nl
                 + "\t-o\tOutput file prefix and directory" + nl
-                + "\t-m\tGMS file for weight rebalancing [optional]" + nl
+                + "\t-m\tSet ProbBased Phred filter. All read pairs below this are removed [optional floating point; default is 0.0001]" + nl
                 + "\t-f\tFloating point value for threshold of detection [optional; default is one]" + nl
                 + "\t-b\tNumber of pairs to hold per set; reducing this will reduce memory overhead [optional; default is 10]" + nl
                 + "\t-i\tThe threshold of raw supporting reads needed for a set to be considered for candidate SV calling [optional; default is 2]" + nl
@@ -78,7 +78,7 @@ public class RPSRmain {
                 "s:c:g:o:m:f:b:d|i:t:p:", 
                 "scgo", 
                 "scgomfbditp", 
-                "flatfile", "chromosome", "gapfile", "outbase", "gms", "filter", "buffer", "debug", "thresh", "threads", "temp");
+                "flatfile", "chromosome", "gapfile", "outbase", "pfilter", "filter", "buffer", "debug", "thresh", "threads", "temp");
         
         cmd.AddMode("preprocess", 
                 "RPSR preprocess mode" + nl +

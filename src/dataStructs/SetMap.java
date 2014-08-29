@@ -22,12 +22,14 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
     
     public <V extends ReadPair> boolean checkAndCombinePairs(V pair){
         if(this.containsChr(pair.Chr())){
-            for(int b : utils.BinBed.getBins(pair.innerStart, pair.innerEnd)){
+            for(int b : utils.BinBed.getBins(pair.Start(), pair.End())){
                 if(this.containsBin(pair.Chr(), b)){
                     for(T set : this.getBedAbstractList(pair.Chr(), b)){
                         if(set.pairOverlaps(pair)){
-                            if(pair.innerEnd > set.innerStart)
+                            if(!pair.getReadFlags().contains(readEnum.IsUnbalanced) && pair.innerEnd > set.innerStart)
                                 set.addReadPair(pair); // Only if the pair does not make the interior coordinates squished!
+                            if(pair.getReadFlags().contains(readEnum.IsUnbalanced))
+                                set.addReadPair(pair); // Just in case our read is an unbalanced split!
                             return true; // Even if the pair wasn't added, we reached the interior of the conditional, so we should report an overlap
                         }
                     }

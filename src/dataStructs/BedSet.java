@@ -79,7 +79,8 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      */
     public void addReadPair(ReadPair bed){
         //refineCoords(bed.Start(), bed.End(), bed.innerStart, bed.innerEnd);
-        this.svType = (this.svType == null)? bed.svType : this.svType;
+        if(!bed.getReadFlags().contains(readEnum.IsUnbalanced))
+            this.svType = (this.svType == null)? bed.svType : this.svType;
         this.bufferedAdd(bed);
     }
     /**
@@ -88,6 +89,24 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      * @return
      */
     public boolean pairOverlaps(ReadPair b){
+        if(b.getReadFlags().contains(readEnum.IsUnbalanced)){
+            // We need to carefully consider if this unbalanced split COULD be a part of this variant call
+            if(this.svType == callEnum.DELETION
+                    && b.Start() < this.end && b.End() > this.start
+                    && (this.divSup > -1 || this.splitSup > -1)){
+                // We only consider adding this if there is an existing pair here
+                if(this.makesReadRegionTooLong(start, innerStart, b.Start(), b.End(), (innerStart - start))
+                    && this.makesReadRegionTooLong(innerEnd, end, b.Start(), b.End(), (innerStart - start)))
+                    return false; // Either way we add this split, it doesn't jive with our expectations
+                return true; // It could be a part of this pair
+            }else if(this.svType == callEnum.TANDEM
+                    && (!this.makesReadRegionTooLong(start, innerStart, b.Start(), b.End(), (innerStart - start))
+                    || !this.makesReadRegionTooLong(innerEnd, end, b.Start(), b.End(), (innerStart - start)))){
+                return true; // This could be a Tandem dup unbalanced split
+            }else{
+                return false;
+            }            
+        }
         if(this.makesReadRegionTooLong(start, innerStart, b.Start(), b.getInnerStart(), (b.innerStart - b.Start()))
                 || this.makesReadRegionTooLong(innerEnd, end, b.getInnerEnd(), b.End(), (b.innerStart - b.Start())))
             return false; // Added in to prevent logic that expanded read uncertainty regions because of overlapping exterior coordinates
@@ -115,8 +134,17 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
                 && this.Start() < b.innerStart
                 && this.End() > b.innerEnd
                 && svTypeConsistency(this.svType, b.getSVType())
-                && splitSup > 1){
+                && splitSup > -1){
                 // Split read overlap with container with existing splits
+                return true;
+            }else if(this.svType == callEnum.TANDEM
+                    && this.splitSup < -1
+                    && this.divSup > -1
+                    && (b.Start() < start && b.End() > end)
+                    && (!this.makesReadRegionTooLong(start, innerStart, b.Start(), b.getInnerStart(), (innerStart - start))
+                    && !this.makesReadRegionTooLong(innerEnd, end, b.getInnerEnd(), b.End(), (innerStart - start)))){
+                // split read in tandem dup region
+                // It needs to extend the exterior coordinates if it is a fully paired split
                 return true;
             }else if(this.innerStart == b.innerStart && this.innerEnd == b.innerEnd
                     && svTypeConsistency(this.svType, b.getSVType())){
@@ -190,7 +218,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
     private boolean makesReadRegionTooLong(int s1, int s2, int e1, int e2, int insert){
         int[] i = {s1, s2, e1, e2};
         Arrays.sort(i);
-        return (i[3] - i[0] > insert * 100);
+        return (i[3] - i[0] > insert * 6);
     }
     
     private void refineStartCoords(int ... a){
@@ -277,7 +305,7 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
                     line = line.trim();
                     String[] segs = line.split("\t");
                     ReadPair temp = new ReadPair(segs);
-                    if(temp.getReadFlags().contains(readEnum.IsSplit))
+                    if(temp.getReadFlags().contains(readEnum.IsSplit) && !temp.getReadFlags().contains(readEnum.IsUnbalanced))
                         this.splitSup += 1;
                     if(temp.getReadFlags().contains(readEnum.IsUnbalanced)){
                         //this.unbalSplit += 1;
@@ -315,6 +343,41 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         }
         this.pairs.clear();
     }
+    
+    private boolean firstIsClosest(int start, int end){
+        int difstart = Math.abs(start - this.start);
+        int difend = Math.abs(end - this.end);
+        return difstart < difend;
+    }
+    
+    private void determineUnbalancedNewCoords(ReadPair b){
+        EnumSet<readEnum> r = b.getReadFlags();
+        if(r.contains(readEnum.FirstForward) || r.contains(readEnum.SecondForward)){
+            if(this.svType == callEnum.DELETION){
+                // Changed logic to account for issues with unbalanced read placement
+                
+                if(firstIsClosest(b.Start(), b.End()) && b.Start() < this.innerEnd)
+                    this.innerStart = b.Start();
+            }else if(this.svType == callEnum.TANDEM){
+                // Since orientation is inverted for tandem dups, this goes on the end
+                if(this.End() < b.End())
+                    this.end = b.End();
+            }
+        }else if(r.contains(readEnum.FirstReverse) || r.contains(readEnum.SecondReverse)){
+            if(this.svType == callEnum.DELETION){
+                // Changed logic to account for issues with unbalanced read placement
+                if(b.Start() == 7496284){
+                    System.out.println(b.toString() + "\t" + firstIsClosest(b.Start(), b.End()) + "\t" + this.innerStart + "\t" + this.innerEnd);
+                }
+                if(!firstIsClosest(b.Start(), b.End()) && b.End() > this.innerStart)
+                    this.innerEnd = b.End();
+            }else if(this.svType == callEnum.TANDEM){
+                // Since orientation is inversted for tandem dups, this goes before the start
+                if(this.start >  b.Start())
+                    this.start = b.Start();
+            }
+        }
+    }
 
     @Override
     public <BedAbstract> void bufferedAdd(BedAbstract a) {
@@ -334,17 +397,28 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
             this.innerStart = working.innerStart;
             this.innerEnd = working.innerEnd;
             this.end = working.End();
+        }else if(working.getReadFlags().contains(readEnum.IsUnbalanced)){
+            determineUnbalancedNewCoords(working);
+        }else if(working.getReadFlags().contains(readEnum.IsSplit) && this.svType == callEnum.TANDEM){
+            if(splitSup < -1){
+                // There are no other split reads here, so let's refine the coordinates
+                if(working.Start() < start)
+                    start = working.Start();
+                if(working.End() > end)
+                    end = working.End();
+            }
         }else{
             this.refineStartCoords(this.start, this.innerStart, working.Start(), working.innerStart);
             this.refineEndCoords(this.end, this.innerEnd, working.End(), working.innerEnd);
         }
         this.chr = working.Chr();
-        this.svType = (this.svType == null)? working.svType : this.svType;
+        if(!working.getReadFlags().contains(readEnum.IsUnbalanced))
+            this.svType = (this.svType == null)? working.svType : this.svType;
         if(working.getReadFlags().contains(readEnum.IsDisc)){
             if(this.divSup == -1)
                 divSup = 0;
             divSup++;
-        }else if(working.getReadFlags().contains(readEnum.IsSplit)){
+        }else if(working.getReadFlags().contains(readEnum.IsSplit) && !working.getReadFlags().contains(readEnum.IsUnbalanced)){
             if(this.splitSup == -1)
                 splitSup = 0;
             splitSup++;

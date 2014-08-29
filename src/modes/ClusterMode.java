@@ -26,6 +26,7 @@ public class ClusterMode {
     private int threshold = 2;
     private double phredFilter = 1d;
     private int threads = 1;
+    private double rpPhredFilter = 0.0001d;
     
     public ClusterMode(SimpleModeCmdLineParser values){
         flatFile = values.GetValue("flatfile");
@@ -34,10 +35,13 @@ public class ClusterMode {
         outBase = values.GetValue("outbase");
         if(values.HasOpt("buffer"))
             buffer = Integer.parseInt(values.GetValue("buffer"));
-
+        
+        if(values.HasOpt("pfilter"))
+            this.rpPhredFilter = Double.parseDouble(values.GetValue("pfilter"));
+        
         debug = values.GetValue("debug").equals("true");
         if(values.HasOpt("thresh"))
-            threshold = Integer.parseInt(values.GetValue("thresh")) + 1;
+            threshold = Integer.parseInt(values.GetValue("thresh"));
         if(values.HasOpt("threads"))
             threads = Integer.parseInt(values.GetValue("threads"));
         if(values.HasOpt("filter"))
@@ -47,7 +51,7 @@ public class ClusterMode {
     public void run(){
         // Read input files and place into preliminary containers
         //readInputFiles fileParser = new readInputFiles(cmd.flatFile, cmd.gapFile, cmd.chr);
-        BufferedSetReader reader = new BufferedSetReader(flatFile, gapFile, chr, buffer);
+        BufferedSetReader reader = new BufferedSetReader(flatFile, gapFile, chr, buffer, rpPhredFilter);
         
         // Run set weight cover to cluster sets
         

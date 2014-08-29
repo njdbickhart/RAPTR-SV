@@ -61,7 +61,9 @@ public class SamToDivet {
                     fend = String.valueOf(Integer.parseInt(first[5]) + first[11].length()),
                     fmdz = this.getMDZTag(first, first[11]);
             int fedit = Integer.parseInt(this.getNMITag(first));
-            double fprob = stats.probBasedPhred.calculateScore(fmdz, first[11], first[11].length());
+            //double fprob = stats.probBasedPhred.calculateScore(fmdz, first[11], first[11].length());
+            // TESTING if mapping probability is better estimate of read mapping
+            double fprob = 1.0d - Math.pow(10d, Double.parseDouble(first[6]) / -10d);
             int fflags = Integer.parseInt(first[3]);
             if((fflags & 0x10) == 0x10)
                 forient = "R";
@@ -75,7 +77,9 @@ public class SamToDivet {
                         send = String.valueOf(Integer.parseInt(sec[5]) + sec[11].length()),
                         smdz = this.getMDZTag(sec, sec[11]);
                 int concordant = 0, sedit = Integer.parseInt(this.getNMITag(sec));
-                double sprob = stats.probBasedPhred.calculateScore(smdz, sec[12], sec[12].length());
+                //double sprob = stats.probBasedPhred.calculateScore(smdz, sec[12], sec[12].length());
+                // TESTING if mapping probability is better estimate of read mapping
+                double sprob = 1.0d - Math.pow(10d, Double.parseDouble(sec[6]) / -10d);
                 int sflags = Integer.parseInt(sec[3]);
                 if((sflags & 0x10) == 0x10)
                     sorient = "R";

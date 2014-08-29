@@ -91,9 +91,17 @@ public class SamRecordMatcher extends TempDataClass {
         if(a.getCigarString().contains("S"))
             softclips = this.getCigarSoftClips(a.getCigar());
         double softthresh = (double)a.getReadLength() * 0.20d;
+        boolean properMDist = false;
+        boolean properOrient = true;
         if((rgflags & 0x1) == 0x1)
             if(insert > t[0] && insert < t[1] && softclips < softthresh)
-                return; // This entry was properly mated and was not discordant; we don't need it
+                properMDist = true; // This entry has proper spacing
+        
+        if((rgflags & 0x2) != 0x2)
+            properOrient = false; // A simplified metric to determine if there is an anomaly with read pairing
+        
+        if(properMDist && properOrient)
+            return; // This read had both proper orientation and was within expected size distributions, so nothing to see here!
         
         // Remove any unwanted characters in the read name prior to our use of the clone function
         if(a.getReadName().matches("[_/]")){
