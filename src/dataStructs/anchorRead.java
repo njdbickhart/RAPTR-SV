@@ -4,11 +4,6 @@
  */
 package dataStructs;
 
-import file.BedAbstract;
-import file.BedFileException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 /**
  *
  * @author bickhart
