@@ -13,31 +13,16 @@ import java.util.logging.Logger;
  *
  * @author bickhart
  */
-public class anchorRead extends BedAbstract{
-    protected boolean forward; // true = forward, false = reverse
-    private double probPhred;
+public class anchorRead {
+    public final String chr;
+    public final int start;
+    public final boolean forward; // true = forward, false = reverse
+    public final double probPhred; // 
     
-    public anchorRead(String chr, int start, int end, String readName, int samFlag, String mdVal, String qual){
-        
+    public anchorRead(String chr, int start, int samFlag, int mapQ){
         this.chr = chr;
         this.start = start;
-        this.end = end;
-        this.name = readName;
-        this.forward = samFlag == 0;
-        calcProbs(qual, mdVal);
-    }
-    
-    @Override
-    public int compareTo(BedAbstract t) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-    private void calcProbs(String qStr, String mmTag){
-        this.probPhred = stats.probBasedPhred.calculateScore(mmTag, qStr, qStr.length());
-    }
-    public boolean getFor(){
-        return this.forward;
-    }
-    public double ProbPhred(){
-        return this.probPhred;
+        this.forward = (samFlag & 0x10) != 0x10;
+        this.probPhred = 1.0d - Math.pow(10d, mapQ / -10d);
     }
 }
