@@ -221,8 +221,8 @@ public class ReadPair extends WeightedBed{
     private void convertSplit(pairSplit split){
         this.rFlags.add(readEnum.IsSplit);
         this.name = split.Name();
-        this.anchorChr = split.retAnchor().Chr();
-        this.anchorStart = split.retAnchor().Start();
+        this.anchorChr = split.retAnchor().chr;
+        this.anchorStart = split.retAnchor().start;
         if(split.retAnchor().forward){
             this.rFlags.add(readEnum.HasOEAForward);
         }else{

@@ -72,9 +72,11 @@ public class BufferedSetReader {
             // Load Divet files
             SetMap<BufferedInitialSet> dSet = this.populateDivets(f);
             // Load one end anchors
+            // I am making a change to the logic here as the anchor reads are of minimal value apart from orienting proper splits
             HashMap<String, ArrayList<anchorRead>> anchors = this.populateAnchors(f);
             // Now, complex split read logic
             dSet = this.associateSplits(anchors, f, dSet);
+            anchors.clear();
             
             for(BedSet s : dSet.getUnsortedBedList(chr)){
                 this.sets.checkAndCombineSets((BufferedInitialSet)s);
@@ -115,11 +117,11 @@ public class BufferedSetReader {
                 segs = line.split("\t");
                 if(segs.length < 12)
                     continue;
-                divMaps.addRead(segs[0].trim());
                 
                 if(!(segs[1].equals(this.chr))){
                     continue;
                 }
+                divMaps.addRead(segs[0].trim());
                 if(!segs[12].equals("1") && Double.valueOf(segs[11]) > pfilter){
                     ReadPair rp = new ReadPair(line, file, readEnum.IsDisc);
                     tempholder.add(rp);
@@ -159,16 +161,10 @@ public class BufferedSetReader {
                 if(!(rec.getReferenceName().equals(this.chr))){
                     continue;
                 }
-                Set<String> tags = rec.getAttributes().stream().map((s) -> {return s.tag;}).collect(Collectors.toSet());
-                if(!tags.contains("MD"))
-                    continue;
                 anchorRead aR = new anchorRead(rec.getReferenceName(),
                     rec.getAlignmentStart(),
-                    rec.getAlignmentEnd(),
-                    rec.getReadName(),
                     rec.getFlags(),
-                    String.valueOf(rec.getAttribute("MD")),
-                    rec.getBaseQualityString());
+                    rec.getMappingQuality());
                 //String clone = rn.GetCloneName(segs[0], Integer.valueOf(segs[1]));
                 appendAnchorToConstruct(anchors, aR, rec.getReadName());
                 
@@ -195,11 +191,11 @@ public class BufferedSetReader {
             while(iterator.hasNext()){
                 SAMRecord line = iterator.next();
                 String ref = line.getReferenceName();
-                if(!(line.getReferenceName().equals(this.chr))){
+                if(!(ref.equals(this.chr))){
                     continue;
                 }
                 splitRead sR = new splitRead(
-                        this.chr, 
+                        ref, 
                         line.getAlignmentStart(), 
                         line.getAlignmentEnd(), 
                         line.getReadName(), 
@@ -255,7 +251,7 @@ public class BufferedSetReader {
             for(anchorRead anchor : aArray){
                 // Easy unbalanced split pairing
                 // Just make sure that it isnt too long!
-                if(Math.abs(sArray.get(0).Start() - anchor.Start()) < 500000){
+                if(anchorConsistency(anchor.chr, sArray.get(0).Chr(), anchor.start, sArray.get(0).Start())){
                     
                     splits.add(new pairSplit(anchor, sArray.get(0), clone));
                 }
@@ -270,7 +266,7 @@ public class BufferedSetReader {
                 // Just make sure that it isnt too long!
                 // Added in a logical test to ensure that the split read isn't 5 bp long
                 // INDEL detection is best done at the alignment stage
-                if(Math.abs(sArray.get(0).Start() - anchor.Start()) < 500000
+                if(anchorConsistency(anchor.chr, sArray.get(0).Chr(), anchor.start, sArray.get(0).Start())
                         && subtractClosest(sArray.get(0).Start(), sArray.get(0).End(), 
                                 sArray.get(1).Start(), sArray.get(1).End()) > 5){
                     splits.add(new pairSplit(anchor, sArray.get(0), sArray.get(1), clone));
@@ -311,8 +307,8 @@ public class BufferedSetReader {
                 for(anchorRead anchor : aArray){
                     for(splitRead fs : forward){
                         for(splitRead rs: reverse){
-                            if(Math.abs(fs.Start() - anchor.Start()) < 500000 &&
-                                    Math.abs(rs.Start() - anchor.Start()) < 500000
+                            if(anchorConsistency(anchor.chr, fs.Chr(), anchor.start, fs.Start()) &&
+                                    anchorConsistency(anchor.chr, rs.Chr(), anchor.start, rs.Start())
                                     && subtractClosest(fs.Start(), fs.End(), 
                                         rs.Start(), rs.End()) > 5){
                                 splits.add(new pairSplit(anchor, fs, rs, clone));
@@ -323,6 +319,13 @@ public class BufferedSetReader {
             }
         }
         return splits;
+    }
+    
+    private boolean anchorConsistency(String achr, String schr, int astart, int sstart){
+        if(achr.equals(schr)){
+            return (Math.abs(sstart - astart) < 1000000);
+        }
+        return false;
     }
     
     private int subtractClosest(int s1, int e1, int s2, int e2){
