@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 public class splitRead extends BedAbstract{
     protected boolean splitFirst; //true = first half or read // false = second half
     protected boolean forward; // true = forward, false = reverse
-    protected double probPhred;
+    protected double probPhred = 0.0d;
     
     public splitRead(String chr, String start, String end, String name, String samFlag, String nmTag, String mmTag, String qual){
         try {
@@ -34,20 +34,21 @@ public class splitRead extends BedAbstract{
         String[] mm = mmTag.split(":");
         calcProbs(qual, mm[2]);
     }
-    public splitRead(String chr, int start, int end, String name, int samFlag, int nmTag, String mmTag, String qual){
+    public splitRead(String chr, int start, int end, String name, int samFlag){
         this.chr = chr;
         this.start = start;
         this.end = end;
         this.name = name;
         determineSplit(name);
-        if(samFlag == 16){
+        if((samFlag & 0x10) == 0x10){
             this.forward = false;
         }else{
             this.forward = true;
         }
+        // I removed probability calculation and instead rely on the anchor read to provide this
         //calcEd(nmTag);
         //String[] mm = mmTag.split(":"); 
-        calcProbs(qual, mmTag);
+        //calcProbs(qual, mmTag);
     }
     @Override
     public int compareTo(BedAbstract t) {
