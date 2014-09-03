@@ -5,16 +5,17 @@
 package dataStructs;
 
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
  * @author bickhart
  */
 public class readNameMappings {
-    private HashMap<String, Integer> readTable;
+    private ConcurrentHashMap<String, Integer> readTable;
     
     public readNameMappings(){
-        this.readTable = new HashMap<>();
+        this.readTable = new ConcurrentHashMap<>();
     }
     
     public void addRead(String read){

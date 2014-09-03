@@ -42,7 +42,7 @@ public class BufferedSetReader {
     
     private final ArrayList<FlatFile> fileEntries = new ArrayList<>();
     private final SetMap<BufferedInitialSet> sets = new SetMap<>();
-    private final SetMap<BufferedInitialSet> finalSets = new SetMap<>();
+    private SetMap<BufferedInitialSet> finalSets = new SetMap<>();
     
     private int splitcounter = 0;
     private int divetcounter = 0;
@@ -65,33 +65,58 @@ public class BufferedSetReader {
         int numLines = this.fileEntries.size();
         int counter = 0;
         
+        final SetMap<BufferedInitialSet> dSet = this.fileEntries.parallelStream()
+                .map((s) -> {return this.populateDivets(s);})
+                .sequential()
+                .reduce(new SetMap<>(), (a, b) -> {
+                   a.checkAndCombineMaps(b, chr);
+                   return a;
+                });
+                
+        int divsets = dSet.getCountElements(chr);
+        System.out.println("[RPSR INPUT] Finished loading divet sets. Identified: " + divsets + " discordant sets");
+        
+        System.gc();
+        
+        this.finalSets = this.fileEntries.parallelStream()
+                .map((s) -> {
+                    HashMap<String, ArrayList<anchorRead>> anchors = this.populateAnchors(s);
+                    return this.associateSplits(anchors, s);})
+                .sequential()
+                .reduce(dSet, (a, b) -> {
+                    a.checkAndCombineMaps(b, chr);
+                    return a;
+                });
+        
+        
+        System.gc();
         // Now to loop through all of the variant files and associate values
         // with appropriate initial sets
-        for(FlatFile f : this.fileEntries){
-            counter++;
-            // Load Divet files
-            SetMap<BufferedInitialSet> dSet = this.populateDivets(f);
-            // Load one end anchors
-            // I am making a change to the logic here as the anchor reads are of minimal value apart from orienting proper splits
-            HashMap<String, ArrayList<anchorRead>> anchors = this.populateAnchors(f);
-            // Now, complex split read logic
-            dSet = this.associateSplits(anchors, f, dSet);
-            anchors.clear();
-            
-            for(BedSet s : dSet.getUnsortedBedList(chr)){
-                this.sets.checkAndCombineSets((BufferedInitialSet)s);
-
-            }
-            int curSets = this.sets.getCountElements(chr);
-            
-            System.out.print("[RPSR INPUT] Read list item: " + counter + " of " + numLines
-                    + "; (D , S): (" + this.divetcounter + " , " + this.splitcounter + "). Current sets: " + curSets + "\r");
+        /*for(FlatFile f : this.fileEntries){
+        counter++;
+        // Load Divet files
+        SetMap<BufferedInitialSet> dSet = this.populateDivets(f);
+        // Load one end anchors
+        // I am making a change to the logic here as the anchor reads are of minimal value apart from orienting proper splits
+        HashMap<String, ArrayList<anchorRead>> anchors = this.populateAnchors(f);
+        // Now, complex split read logic
+        dSet = this.associateSplits(anchors, f, dSet);
+        anchors.clear();
+        
+        for(BedSet s : dSet.getUnsortedBedList(chr)){
+        this.sets.checkAndCombineSets((BufferedInitialSet)s);
+        
         }
-        System.out.println();
+        int curSets = this.sets.getCountElements(chr);
+        
+        System.out.print("[RPSR INPUT] Read list item: " + counter + " of " + numLines
+        + "; (D , S): (" + this.divetcounter + " , " + this.splitcounter + "). Current sets: " + curSets + "\r");
+        }*/
+        /*System.out.println();
         for(BedSet s : this.sets.getUnsortedBedList(chr)){
-            this.finalSets.checkAndCombineSets((BufferedInitialSet)s);
-
-        }
+        this.finalSets.checkAndCombineSets((BufferedInitialSet)s);
+        
+        }*/
         int finSets = this.finalSets.getCountElements(chr);
         System.out.println("[RPSR INPUT] Finished loading all files! Final Sets: " + finSets + ".");
     }
@@ -132,7 +157,7 @@ public class BufferedSetReader {
         }
         
         for(ReadPair d : tempholder){
-            this.divetcounter++;
+            //this.divetcounter++;
             d.setMapCount(divMaps.retMap(d.Name()));
             if(gaps.checkGapOverlap(d)){
                 // This read pair spanned a gap! Nothing to see here...
@@ -184,6 +209,62 @@ public class BufferedSetReader {
             map.get(clone).add(ar);
         }
     }
+    private SetMap<BufferedInitialSet> associateSplits(HashMap<String, ArrayList<anchorRead>> anchors, FlatFile file){        
+        SetMap<BufferedInitialSet> tSet = new SetMap<BufferedInitialSet>();
+        try(SAMFileReader samReader = new SAMFileReader(file.getSplitsam().toFile())){
+            SAMRecordIterator iterator = samReader.iterator();
+            while(iterator.hasNext()){
+                SAMRecord line = iterator.next();
+                String ref = line.getReferenceName();
+                if(!(ref.equals(this.chr))){
+                    continue;
+                }
+                splitRead sR = new splitRead(
+                        ref, 
+                        line.getAlignmentStart(), 
+                        line.getAlignmentEnd(), 
+                        line.getReadName(), 
+                        line.getFlags()
+                );
+                appendSplitToConstruct(sR, rn.GetCloneName(sR.Name(), line.getFlags()));                    
+            }
+            for(String clone : anchors.keySet()){
+                if(this.soleSplits.containsKey(clone)){
+                    ArrayList<pairSplit> temp = pairSplits(anchors.get(clone), clone);
+                    if(temp.isEmpty()){
+                        //System.err.println("[BUFFSETREADER] Error with split pairing!");
+                        continue;
+                    }
+                    // Sorting so that balanced splits appear first
+                    Collections.sort(temp);
+                    for(pairSplit p : temp){
+                        this.splitcounter++;
+                        if(gaps.checkGapOverlap(p)){
+                            // This read pair spanned a gap! Nothing to see here...
+                            continue;
+                        }
+                        ReadPair work = new ReadPair(p, file, readEnum.IsSplit);
+                        work.setMapCount(this.anchorMaps.retMap(clone));
+                        if(!tSet.checkAndCombinePairs(work)){
+                            if(work.getReadFlags().contains(readEnum.IsUnbalanced))
+                                continue;
+                            // This balanced split pair does not intersect any known set
+                            // Time to create a new set for it
+                            BufferedInitialSet set = new BufferedInitialSet(this.buffer, "InitSet");
+                            set.addReadPair(work);
+                            tSet.addBedData(set);
+                        }
+                    }
+                }
+            }
+            this.soleSplits.clear();
+        }catch(Exception ex){
+            Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        //System.out.println("[VHSR INPUT] Finished loading " + this.splits.size() + " paired splits");
+        return tSet;
+    }
     private SetMap<BufferedInitialSet> associateSplits(HashMap<String, ArrayList<anchorRead>> anchors, FlatFile file, SetMap<BufferedInitialSet> dSet){        
         
         try(SAMFileReader samReader = new SAMFileReader(file.getSplitsam().toFile())){
@@ -199,10 +280,7 @@ public class BufferedSetReader {
                         line.getAlignmentStart(), 
                         line.getAlignmentEnd(), 
                         line.getReadName(), 
-                        line.getFlags(), 
-                        (int)line.getAttribute("NM"), 
-                        String.valueOf(line.getAttribute("MD")), 
-                        line.getBaseQualityString()
+                        line.getFlags()
                 );
                 appendSplitToConstruct(sR, rn.GetCloneName(sR.Name(), line.getFlags()));                    
             }
@@ -270,6 +348,10 @@ public class BufferedSetReader {
                         && subtractClosest(sArray.get(0).Start(), sArray.get(0).End(), 
                                 sArray.get(1).Start(), sArray.get(1).End()) > 5){
                     splits.add(new pairSplit(anchor, sArray.get(0), sArray.get(1), clone));
+                    if(sArray.get(0).Start() <= 20707037 && sArray.get(0).Start() >= 20706839
+                            && sArray.get(1).Start() <= 21002974 && sArray.get(1).End() >= 21002776){
+                        System.out.println("Deletion split pair: " + sArray.get(0).toString() + ";" + sArray.get(1).toString());
+                    }
                 }
             }
         }
@@ -307,11 +389,15 @@ public class BufferedSetReader {
                 for(anchorRead anchor : aArray){
                     for(splitRead fs : forward){
                         for(splitRead rs: reverse){
-                            if(anchorConsistency(anchor.chr, fs.Chr(), anchor.start, fs.Start()) &&
-                                    anchorConsistency(anchor.chr, rs.Chr(), anchor.start, rs.Start())
+                            if((anchorConsistency(anchor.chr, fs.Chr(), anchor.start, fs.Start()) ||
+                                    anchorConsistency(anchor.chr, rs.Chr(), anchor.start, rs.Start()))
                                     && subtractClosest(fs.Start(), fs.End(), 
                                         rs.Start(), rs.End()) > 5){
                                 splits.add(new pairSplit(anchor, fs, rs, clone));
+                                if(sArray.get(0).Start() <= 20707037 && sArray.get(0).Start() >= 20706839
+                                    && sArray.get(1).Start() <= 21002974 && sArray.get(1).End() >= 21002776){
+                                    System.out.println("Deletion split pair: " + sArray.get(0).toString() + ";" + sArray.get(1).toString());
+                                }
                             }
                         }
                     }
