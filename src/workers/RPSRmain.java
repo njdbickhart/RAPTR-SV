@@ -69,8 +69,8 @@ public class RPSRmain {
                 + "\t-c\tChromosome to be processed" + nl
                 + "\t-g\tAssembly Gap bed file" + nl
                 + "\t-o\tOutput file prefix and directory" + nl
-                + "\t-m\tSet ProbBased Phred filter. All read pairs below this are removed [optional floating point; default is 0.0001]" + nl
-                + "\t-f\tFloating point value for threshold of detection [optional; default is one]" + nl
+                + "\t-m\tPair ProbBased Phred filter. All discordant read pairs below this are removed [optional floating point; default is 0.0001]" + nl
+                + "\t-f\tFloating point value for set threshold of detection [optional; default is one]" + nl
                 + "\t-b\tNumber of pairs to hold per set; reducing this will reduce memory overhead [optional; default is 10]" + nl
                 + "\t-i\tThe threshold of raw supporting reads needed for a set to be considered for candidate SV calling [optional; default is 2]" + nl
                 + "\t-t\tThe number of threads to devote to SetWeightCover screening [optional; default is 1]" + nl
