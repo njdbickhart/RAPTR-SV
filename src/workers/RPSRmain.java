@@ -7,7 +7,6 @@ package workers;
 import GetCmdOpt.SimpleModeCmdLineParser;
 import modes.ClusterMode;
 import modes.PreprocessMode;
-import setWeightCover.weightCoverEvents;
 
 /**
  *
