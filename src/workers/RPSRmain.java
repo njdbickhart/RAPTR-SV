@@ -14,6 +14,7 @@ import setWeightCover.weightCoverEvents;
  * @author bickhart
  */
 public class RPSRmain {
+    private static final String version = "0.0.1";
 
     /**
      * @param args the command line arguments
@@ -54,6 +55,7 @@ public class RPSRmain {
     private static SimpleModeCmdLineParser PrepareCMDOptions(){
         String nl = System.lineSeparator();
         SimpleModeCmdLineParser cmd = new SimpleModeCmdLineParser("RPSR.jar\tA tool to cluster split and paired end reads" + nl
+                + "Version: " + version + nl
             + "Usage: java -jar RPSR.jar [mode] [mode specific options]" + nl
                 + "Modes:" + nl
                 + "\tpreprocess\tInterprets BAM files to generate metadata for \"cluster\" mode" + nl 
