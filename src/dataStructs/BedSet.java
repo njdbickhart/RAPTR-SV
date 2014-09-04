@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import setWeightCover.BufferedInitialSet;
 import stats.MergerUtils;
@@ -72,6 +73,11 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      * Container for read names, to ensure that the object has the read mapping numbers and can tell if a read has been previously used
      */
     protected HashMap<String, Integer> readNames = new HashMap<>();
+    /**
+     * This flag sets whether this set needs to be recalculated during set weight cover due to having overlapping reads with another set
+     * Setting to "true" at first to allow for initial calculation of values
+     */
+    private boolean needsRecalculation = true;
     
     /**
      * Adds a ReadPair object to this container and modifies the coordinates appropriately
@@ -287,7 +293,8 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      * @param names
      */
     public void reCalculateValues(HashSet<String> names){
-        populateCalculations(names);
+        if(this.needsRecalculation)
+            populateCalculations(names);
     }
     /*
      * Overriden methods
@@ -571,6 +578,29 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         ArrayList<String> names = new ArrayList<>();
         this.readNames.keySet().stream().forEach((s) -> names.add(s));
         return names;
+    }
+    
+    /**
+     * 
+     * @param reads
+     */
+    public void toggleRecalculateFlat(Set<String> reads){
+        this.needsRecalculation = false; // we set this to false by default
+        if(reads.size() < this.readNames.keySet().size()){
+            for(String r : reads){
+                if(this.readNames.containsKey(r))
+                    this.needsRecalculation = true;
+            }
+        }else{
+            for(String r : this.readNames.keySet()){
+                if(reads.contains(r))
+                    this.needsRecalculation = true;
+            }
+        }
+    }
+    
+    public boolean needsRecalculation(){
+        return this.needsRecalculation;
     }
     
     /**

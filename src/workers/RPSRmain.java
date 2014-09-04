@@ -13,7 +13,7 @@ import modes.PreprocessMode;
  * @author bickhart
  */
 public class RPSRmain {
-    private static final String version = "0.0.1";
+    private static final String version = "0.0.2";
 
     /**
      * @param args the command line arguments
