@@ -221,7 +221,9 @@ public class SamRecordMatcher extends TempDataClass {
                                 anchorlookup.put(rg, new HashMap<>());
                             anchorlookup.get(rg).put(temp[0], this.flipCloneNum(Short.parseShort(temp[1])));
                         }
-                    }else if(records.size() > 1){
+                    }
+                    // I changed this to allow for discordant read detection after split read detection
+                    if(records.size() > 1){
                         Integer[] t = thresholds.get(rg);
                         SamToDivet converter = new SamToDivet(last, t[0], t[1], t[2]);
                         records.stream().forEach((r) -> {

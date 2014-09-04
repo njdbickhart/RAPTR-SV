@@ -10,8 +10,12 @@ import file.BedAbstract;
 import finalSVTypes.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 
@@ -68,6 +72,31 @@ public class weightCoverEvents{
         // Parallel implementation to try to speed up calculations
         this.inputSets.parallelStream()
                 .forEach(s -> s.reCalculateValues(names));
+        
+        // Now I'm going to try to do some dynamic programming to identify sets that need to be recalculated
+        Set<String> lookout = this.inputSets.parallelStream()
+                .map((s) -> s.getReadNames())
+                .flatMap(ArrayList::stream)
+                .collect(Collectors.groupingByConcurrent(o -> o, Collectors.counting()))
+                // Now we have a HashMap<String, Long> count of the read name counts, let's turn this into our set of unique names
+                .entrySet().stream()
+                .filter((b) -> b.getValue() > 1)
+                .map((v) -> v.getKey())
+                .collect(Collectors.toCollection(HashSet::new));
+        
+        // Now we reduce the set down to just the entries that are in multiple sets
+        /*Set<String> lookout = nameUsage.entrySet().stream()
+        .filter((s) -> s.getValue() > 1)
+        .map((s) -> s.getKey())
+        .collect(Collectors.toCollection(HashSet::new));*/
+        
+        System.out.println("[RPSR WEIGHT] Reads that need recalculation: " + lookout.size());
+        
+        // Now its time to toggle the sets to see if they need to be recalculated
+        this.inputSets.parallelStream()
+                .forEach(s -> s.toggleRecalculateFlat(lookout));
+        
+        
         /*for(BufferedInitialSet s : this.inputSets){
         if(s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV){
         // Only needed for inversions
@@ -80,6 +109,9 @@ public class weightCoverEvents{
         //SortWeightMap supportSort = new SortWeightMap();
         int initialSize = this.inputSets.size();
         int finalCount = 0, removal = 0;
+        // Initial removal to ensure that our list of sets is low for subsequent collection
+        removal = this.setRemoval(removal);
+        
         for(int z = 0; z < initialSize; z++){
             // Now sort list of elements for the weight cover algorithm 
             Collections.sort(this.inputSets, (BufferedInitialSet t, BufferedInitialSet t1) -> {
@@ -116,6 +148,12 @@ public class weightCoverEvents{
                     break;
             }
             
+            if(working.needsRecalculation()){
+                // If this was one of our sets that had read names overlapping another set
+                // then store the read names to estimate new calculations down the road
+                working.getReadNames().stream().forEach((s) -> names.add(s));
+            }
+            
             //ArrayList<BufferedInitialSet> toRemove = new ArrayList<>();
             this.inputSets.get(0).closeTemp('A');
             this.inputSets.remove(0);
@@ -123,17 +161,12 @@ public class weightCoverEvents{
             
             // Reduction based mapping methods to speed up calculation
             // Allows the devotion of more threads to the stream here
-            this.inputSets.parallelStream()
-                    .forEach(s -> s.reCalculateValues(names));
-            
-            List<BufferedInitialSet> remover = this.inputSets.parallelStream()
-                    .filter(s -> s.rawReads < thresh || s.sumFullSupport < phredFilter)
-                    .collect(Collectors.toList());
-            
-            removal += remover.size();
-            for(BufferedInitialSet r : remover){
-                r.deleteTemp();
-                this.inputSets.remove(r);
+            if(working.needsRecalculation()){
+                // Only collecting removal elements if this set had an overlapping read with another set
+                this.inputSets.parallelStream()
+                        .forEach(s -> s.reCalculateValues(names));
+
+                removal = setRemoval(removal);
             }
             
             /*for(int i = 0; i < this.inputSets.size(); i++){
@@ -151,10 +184,23 @@ public class weightCoverEvents{
             if(this.inputSets.isEmpty()){
                 break;
             }
-            System.out.print("[RPSR WEIGHT] Working on set number: " + z + " of " + initialSize + " and removed: " + removal + "\r");
+            int actual = z + removal;
+            System.out.print("[RPSR WEIGHT] Working on set number: " + actual + " of " + initialSize + " and removed: " + removal + "\r");
         }
         
         System.out.println(System.lineSeparator() + "[RPSR WEIGHT] Finished with: " + this.chr + ": " + finalCount + " out of " + initialSize + " initial Events");
+    }
+
+    private int setRemoval(int removal) {
+        List<BufferedInitialSet> remover = this.inputSets.parallelStream()
+                .filter(s -> (s.rawReads < thresh || s.sumFullSupport < phredFilter))
+                .collect(Collectors.toList());
+        removal += remover.size();
+        for(BufferedInitialSet r : remover){
+            r.deleteTemp();
+            this.inputSets.remove(r);
+        }
+        return removal;
     }
     
     private void ProcessTanDup(BufferedInitialSet a){
