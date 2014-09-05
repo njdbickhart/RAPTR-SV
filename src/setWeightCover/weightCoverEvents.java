@@ -184,8 +184,8 @@ public class weightCoverEvents{
             if(this.inputSets.isEmpty()){
                 break;
             }
-            int actual = z + removal;
-            System.out.print("[RPSR WEIGHT] Working on set number: " + actual + " of " + initialSize + " and removed: " + removal + "\r");
+            
+            System.out.print("[RPSR WEIGHT] Working on set number: " + removal + " of " + initialSize + " and have retained: " + z + "\r");
         }
         
         System.out.println(System.lineSeparator() + "[RPSR WEIGHT] Finished with: " + this.chr + ": " + finalCount + " out of " + initialSize + " initial Events");
