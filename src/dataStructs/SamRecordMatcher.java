@@ -222,7 +222,7 @@ public class SamRecordMatcher extends TempDataClass {
                             anchorlookup.get(rg).put(temp[0], this.flipCloneNum(Short.parseShort(temp[1])));
                         }
                     }
-                    // I changed this to account for crappy reads being mistaken as splits
+                    // I changed this to allow for discordant read detection after split read detection
                     if(records.size() > 1){
                         Integer[] t = thresholds.get(rg);
                         SamToDivet converter = new SamToDivet(last, t[0], t[1], t[2]);
