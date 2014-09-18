@@ -13,41 +13,45 @@ import setWeightCover.WeightedBed;
  * @author bickhart
  */
 public class pairSplit extends WeightedBed{
-    private anchorRead anchor;
+    private final anchorRead anchor;
     private splitRead split1;
     private splitRead split2;
-    private int readlength;
-    private boolean isBalanced; // flag for determining if there is one split or two in the set
+    private final int readlength;
+    private final boolean isBalanced; // flag for determining if there is one split or two in the set
     private int mappings = 0;
-    private double avgProb;
+    private final double avgProb;
 
     public pairSplit(anchorRead anchor, splitRead split1, splitRead split2, String cloneName){
         this.anchor = anchor;
-        this.chr = anchor.Chr();
+        this.chr = anchor.chr;
         this.split1 = split1;
         this.readlength = split1.End() - split1.Start();
         this.split2 = split2;
         this.setName(cloneName);
-        SplitCoords coords = new SplitCoords(split1.Start(), split1.End(), split2.Start(), split2.End());
-        this.start = coords.OutStart();
-        this.end = coords.OutEnd();
+        Integer[] coords = {split1.Start(), split1.End(), split2.Start(), split2.End()};
+        Arrays.sort(coords); // This is just to ensure that the exterior coordinates of the pair are represented
+        this.start = coords[0];
+        this.end = coords[3];
         this.isBalanced = true;
-        this.avgProb = calcAvgProb(anchor, split1, split2);
+        this.avgProb = anchor.probPhred;
     }
     public pairSplit(anchorRead anchor, splitRead split1, String cloneName){
         this.anchor = anchor;
-        this.chr = anchor.Chr();
+        this.chr = anchor.chr;
         this.start = split1.Start();
         this.end = split1.End();
         this.split1 = split1;
         this.readlength = split1.End() - split1.Start();
-        this.setName(getCloneName(anchor.Name()));
+        this.setName(cloneName);
         this.isBalanced = false;
-        this.avgProb = calcAvgProb(anchor, split1);
+        this.avgProb = anchor.probPhred;
     }
+    
+    // I am replacing this method of calculating the value of the split read with just the anchor mapping prob
+    // This should help reduce program runtime
     private double calcAvgProb(anchorRead anchor, splitRead split1, splitRead split2){
         double sum;
-        sum = anchor.ProbPhred();
+        sum = anchor.probPhred;
         sum += split1.ProbPhred();
         sum += split2.ProbPhred();
         sum /= 3;
@@ -55,7 +59,7 @@ public class pairSplit extends WeightedBed{
     }
     private double calcAvgProb(anchorRead anchor, splitRead split1){
         double sum;
-        sum = anchor.ProbPhred();
+        sum = anchor.probPhred;
         sum += split1.ProbPhred();
         sum /= 2;
         return sum;
@@ -77,31 +81,7 @@ public class pairSplit extends WeightedBed{
     public void calcWeight() {
         this.weight = (double) 1 / (double) this.mappings;
     }
-    private class SplitCoords{
-        public int outStart;
-        public int inStart;
-        public int outEnd;
-        public int inEnd;
-        public SplitCoords(int ... a){
-            Arrays.sort(a);
-            this.outStart = a[0];
-            this.inStart = a[1];
-            this.inEnd = a[2];
-            this.outEnd = a[3];
-        }
-        public int OutStart(){
-            return this.outStart;
-        }
-        public int InStart(){
-            return this.inStart;
-        }
-        public int InEnd(){
-            return this.inEnd;
-        }
-        public int OutEnd(){
-            return this.outEnd;
-        }
-    }
+    
     // Only calculated for the anchor read
     public void setMappings(int num){
         this.mappings = num;
@@ -121,12 +101,6 @@ public class pairSplit extends WeightedBed{
     }
     public double AvgProb(){
         return this.avgProb;
-    }
-    private String getCloneName(String readName){
-        String clone;
-        String[] nameSplit = readName.split("[/_]");
-        clone = nameSplit[0];
-        return clone;
     }
     public int retReadLen(){
         return this.readlength;

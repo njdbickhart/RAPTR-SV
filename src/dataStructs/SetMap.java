@@ -39,6 +39,11 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
        return false;
     }
     
+    public void checkAndCombineMaps(SetMap<T> map, String chr){
+        map.getUnsortedBedList(chr).stream()
+                .forEach((s) ->{this.checkAndCombineSets((T)s);});
+    }
+    
     public boolean checkAndCombineSets(T bed){
         boolean found = false;
         if(this.containsChr(bed.Chr())){
