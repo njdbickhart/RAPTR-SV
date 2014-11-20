@@ -7,14 +7,11 @@
 package workers;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,10 +50,30 @@ public class MrsFastExecutable implements Callable<String>{
         //pb.redirectOutput(ProcessBuilder.Redirect.PIPE.file());
         final Process p = pb.start();
         // input stream thread
-        new Thread( () -> {
-            try(final BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()))){
+        streamDepleter inputDep = new streamDepleter(p.getInputStream());
+        inputDep.start();
+        
+        
+        
+        // error stream thread
+        streamDepleter errorDep = new streamDepleter(p.getErrorStream());
+        errorDep.start();
+        
+        p.waitFor();
+        Files.deleteIfExists(Paths.get(sam + ".nohit"));
+        return sam;
+    }
+    
+    private class streamDepleter extends Thread{
+        private final InputStream p;
+        public streamDepleter(InputStream p){
+            this.p = p;
+        }
+        @Override
+        public void start() {
+            try(final BufferedReader in = new BufferedReader(new InputStreamReader(p))){
                 //final BufferedWriter out = Files.newBufferedWriter(Paths.get("Mrsfastoutputstream." + fastq + ".out"), Charset.defaultCharset());
-            
+
                 String line;
                 try {
                     while((line = in.readLine()) != null){
@@ -64,39 +81,14 @@ public class MrsFastExecutable implements Callable<String>{
                         //out.newLine();
                         System.out.println(rg + "> " + line);
                     }
-                } catch (IOException ex) {            
+                } catch (IOException ex) {
                     Logger.getLogger(MrsFastExecutable.class.getName()).log(Level.SEVERE, null, ex);
                 }
                 //out.close();
             }catch(IOException ex){
                 ex.printStackTrace();
             }
-        }).start();
-        
-        // error stream thread
-        new Thread(() -> {
-               try(final BufferedReader in = new BufferedReader(new InputStreamReader(p.getErrorStream()))){
-                //final BufferedWriter out = Files.newBufferedWriter(Paths.get("Mrsfasterrorstream." + fastq + ".err"), Charset.defaultCharset());
-            
-                String line;
-                try {
-                    while((line = in.readLine()) != null){
-                        //out.write(line);
-                        //out.newLine();
-                        System.err.println(rg + "> " + line);
-                    }
-                } catch (IOException ex) {            
-                    Logger.getLogger(MrsFastExecutable.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                //out.close();
-            }catch(IOException ex){
-                ex.printStackTrace();
-            }         
-        }).start();
-        
-        p.waitFor();
-        Files.deleteIfExists(Paths.get(sam + ".nohit"));
-        return sam;
+        }
     }
     
     

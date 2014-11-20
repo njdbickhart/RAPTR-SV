@@ -10,13 +10,12 @@ import file.BedAbstract;
 import finalSVTypes.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 
 /**
@@ -53,9 +52,12 @@ public class weightCoverEvents{
     
     public void calculateInitialSetStats(){
         System.out.println("[RPSR WEIGHT] Calculating preliminary set values.");
-        this.inputSets.stream().forEach((s) -> {
+        /*this.inputSets.stream().forEach((s) -> {
+        s.preliminarySetCalcs();
+        });*/
+        for(BufferedInitialSet s : this.inputSets){
             s.preliminarySetCalcs();
-        });
+        }
     }
     
     public void run() {
@@ -65,24 +67,53 @@ public class weightCoverEvents{
         // Only needed for inversions
         // Going to be greedy here and use INSINV and DELINV for Inversion finding, but will treat them
         // as deletions or insertions if they have high support in the main routine
-        this.inputSets.stream()
-                .filter(s -> s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV)
-                .forEach(s -> coordsorted.add(new CoordTree(s)));
+        /*this.inputSets.stream()
+        .filter(s -> s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV)
+        .forEach(s -> coordsorted.add(new CoordTree(s)));*/
+        
+        for(BufferedInitialSet s : this.inputSets){
+            if(s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV)
+                continue;
+            coordsorted.add(new CoordTree(s));
+        }
         
         // Parallel implementation to try to speed up calculations
-        this.inputSets.parallelStream()
-                .forEach(s -> s.reCalculateValues(names));
+        /*this.inputSets.parallelStream()
+        .forEach(s -> s.reCalculateValues(names));*/
+        
+        for(BufferedInitialSet s : this.inputSets){
+            s.reCalculateValues(names);
+        }
         
         // Now I'm going to try to do some dynamic programming to identify sets that need to be recalculated
-        Set<String> lookout = this.inputSets.parallelStream()
-                .map((s) -> s.getReadNames())
-                .flatMap(ArrayList::stream)
-                .collect(Collectors.groupingByConcurrent(o -> o, Collectors.counting()))
-                // Now we have a HashMap<String, Long> count of the read name counts, let's turn this into our set of unique names
-                .entrySet().stream()
-                .filter((b) -> b.getValue() > 1)
-                .map((v) -> v.getKey())
-                .collect(Collectors.toCollection(HashSet::new));
+        /*Set<String> lookout = this.inputSets.parallelStream()
+        .map((s) -> s.getReadNames())
+        .flatMap(ArrayList::stream)
+        .collect(Collectors.groupingByConcurrent(o -> o, Collectors.counting()))
+        // Now we have a HashMap<String, Long> count of the read name counts, let's turn this into our set of unique names
+        .entrySet().stream()
+        .filter((b) -> b.getValue() > 1)
+        .map((v) -> v.getKey())
+        .collect(Collectors.toCollection(HashSet::new));*/
+        
+        Set<String> lookout = new HashSet<>();
+        Map<String, Integer> rcounts = new HashMap<String, Integer>();
+        for(BufferedInitialSet s : this.inputSets){
+            for(String b : s.getReadNames()){
+                if(!rcounts.containsKey(b)){
+                    rcounts.put(b, 1);
+                }else{
+                    int temp = rcounts.get(b);
+                    rcounts.put(b, temp + 1);
+                }
+            }
+        }
+        
+        for(String s : rcounts.keySet()){
+            if(rcounts.get(s) > 1){
+                lookout.add(s);
+            }
+        }
         
         // Now we reduce the set down to just the entries that are in multiple sets
         /*Set<String> lookout = nameUsage.entrySet().stream()
@@ -93,9 +124,12 @@ public class weightCoverEvents{
         System.out.println("[RPSR WEIGHT] Reads that need recalculation: " + lookout.size());
         
         // Now its time to toggle the sets to see if they need to be recalculated
-        this.inputSets.parallelStream()
-                .forEach(s -> s.toggleRecalculateFlat(lookout));
+        /*this.inputSets.parallelStream()
+        .forEach(s -> s.toggleRecalculateFlat(lookout));*/
         
+        for(BufferedInitialSet s : this.inputSets){
+            s.toggleRecalculateFlat(lookout);
+        }
         
         /*for(BufferedInitialSet s : this.inputSets){
         if(s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV){
@@ -114,8 +148,11 @@ public class weightCoverEvents{
         
         for(int z = 0; z < initialSize; z++){
             // Now sort list of elements for the weight cover algorithm 
-            Collections.sort(this.inputSets, (BufferedInitialSet t, BufferedInitialSet t1) -> {
-                if(t.sumFullSupport < t1.sumFullSupport) {
+            Collections.sort(this.inputSets, new Comparator<BufferedInitialSet>(){
+
+                @Override
+                public int compare(BufferedInitialSet t, BufferedInitialSet t1) {
+                    if(t.sumFullSupport < t1.sumFullSupport) {
                     return 1;
                 }else if (t.sumFullSupport > t1.sumFullSupport) {
                     return -1;
@@ -128,6 +165,9 @@ public class weightCoverEvents{
                         return 0;
                     }
                 }
+                }
+                
+                
             });
 
             // Since everything is sorted based on score, loop through and process events
@@ -151,7 +191,11 @@ public class weightCoverEvents{
             if(working.needsRecalculation()){
                 // If this was one of our sets that had read names overlapping another set
                 // then store the read names to estimate new calculations down the road
-                working.getReadNames().stream().forEach((s) -> names.add(s));
+                //working.getReadNames().stream().forEach((s) -> names.add(s));
+                
+                for(String s : working.getReadNames()){
+                    names.add(s);
+                }
             }
             
             //ArrayList<BufferedInitialSet> toRemove = new ArrayList<>();
@@ -163,9 +207,12 @@ public class weightCoverEvents{
             // Allows the devotion of more threads to the stream here
             if(working.needsRecalculation()){
                 // Only collecting removal elements if this set had an overlapping read with another set
-                this.inputSets.parallelStream()
-                        .forEach(s -> s.reCalculateValues(names));
-
+                /*this.inputSets.parallelStream()
+                .forEach(s -> s.reCalculateValues(names));*/
+                
+                for(BufferedInitialSet s : this.inputSets){
+                    s.reCalculateValues(names);
+                }
                 removal = setRemoval(removal);
             }
             
@@ -192,9 +239,15 @@ public class weightCoverEvents{
     }
 
     private int setRemoval(int removal) {
-        List<BufferedInitialSet> remover = this.inputSets.parallelStream()
-                .filter(s -> (s.rawReads < thresh || s.sumFullSupport < phredFilter))
-                .collect(Collectors.toList());
+        /*List<BufferedInitialSet> remover = this.inputSets.parallelStream()
+        .filter(s -> (s.rawReads < thresh || s.sumFullSupport < phredFilter))
+        .collect(Collectors.toList());*/
+        List<BufferedInitialSet> remover = new ArrayList<>();
+        for(BufferedInitialSet s : this.inputSets){
+            if(s.rawReads < thresh || s.sumFullSupport < phredFilter){
+                remover.add(s);
+            }
+        }
         removal += remover.size();
         for(BufferedInitialSet r : remover){
             r.deleteTemp();

@@ -7,8 +7,6 @@ package dataStructs;
 import file.BedMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  *
@@ -40,8 +38,11 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
     }
     
     public void checkAndCombineMaps(SetMap<T> map, String chr){
-        map.getUnsortedBedList(chr).stream()
-                .forEach((s) ->{this.checkAndCombineSets((T)s);});
+        /*map.getUnsortedBedList(chr).stream()
+        .forEach((s) ->{this.checkAndCombineSets((T)s);});*/
+        for(BedSet bed : map.getUnsortedBedList(chr)){
+            this.checkAndCombineSets((T)bed);
+        }
     }
     
     public boolean checkAndCombineSets(T bed){
@@ -86,18 +87,29 @@ public class SetMap<T extends BedSet> extends BedMap<T>{
         return (i[3] - i[0] > insert * 100);
     }
     public ArrayList<BedSet> getUnsortedBedList(String chr){
-        List<BedSet> working = this.getBins(chr)
-                .parallelStream()
-                .flatMap((s) -> this.getBedAbstractList(chr, s).stream())
-                .collect(Collectors.toList());
-        return (ArrayList<BedSet>)working;
+        /*List<BedSet> working = this.getBins(chr)
+        .parallelStream()
+        .flatMap((s) -> this.getBedAbstractList(chr, s).stream())
+        .collect(Collectors.toList());
+        return (ArrayList<BedSet>)working;*/
+        
+        ArrayList<BedSet> working = new ArrayList<>();
+        for(int b : this.getBins(chr)){
+            working.addAll(this.getBedAbstractList(chr, b));
+        }
+        return working;
     }
     
     public int getCountElements(String chr){
-        int c = this.getBins(chr)
-                .parallelStream()
-                .flatMap((s) -> this.getBedAbstractList(chr, s).parallelStream())
-                .mapToInt((s) -> 1).sum();
+        /*int c = this.getBins(chr)
+        .parallelStream()
+        .flatMap((s) -> this.getBedAbstractList(chr, s).parallelStream())
+        .mapToInt((s) -> 1).sum();*/
+        
+        int c = 0;
+        for(int b : this.getBins(chr)){
+            c += this.getBedAbstractList(chr, b).size();
+        }
         return c;
     }
     

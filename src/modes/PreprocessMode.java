@@ -20,15 +20,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMFormatException;
-import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordIterator;
+import net.sf.samtools.SAMSequenceRecord;
 import workers.BamMetadataGeneration;
 import workers.MrsFastRuntimeFactory;
 
@@ -78,10 +73,15 @@ public class PreprocessMode {
         Map<String, SplitOutputHandle> splits = metadata.generateSplitOuts(outbase);
         
         System.err.println("[PREPROCESS] Read input file and calculated sample thresholds.");
-        metadata.getSampleIDs().stream().forEach((s) -> {
+        /*metadata.getSampleIDs().stream().forEach((s) -> {
+        System.err.println("Sample: " + s + " Avg Ins size: " + metadata.getSampleInsSize(s) +
+        " Stdev Ins size: " + metadata.getSampleInsStd(s));
+        });*/
+        
+        for(String s : metadata.getSampleIDs()){
             System.err.println("Sample: " + s + " Avg Ins size: " + metadata.getSampleInsSize(s) +
                     " Stdev Ins size: " + metadata.getSampleInsStd(s));
-        });
+        }
         
         // Run through the BAM file generating split and divet data
         final SAMFileReader reader = new SAMFileReader(new File(input));
@@ -90,14 +90,36 @@ public class PreprocessMode {
         SAMFileHeader h = reader.getFileHeader();
         List<BedSimple> coords = this.getSamIntervals(h);
         
-        List<SamRecordMatcher> collect = coords.parallelStream()
-            .map((b) -> {
-                SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
+        /*List<SamRecordMatcher> collect = coords.parallelStream()
+        .map((b) -> {
+        SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
+        try{
+        SAMFileReader temp = new SAMFileReader(new File(input));
+        temp.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
+        SAMRecordIterator itr = temp.queryContained(b.Chr(), b.Start(), b.End());
+        itr.forEachRemaining((k) -> w.bufferedAdd(k));
+        temp.close();
+        System.out.print("                                                                                        \r");
+        System.out.print("[SAMRECORD] Working on SAM chunk: " + b.Chr() + "\t" + b.Start() + "\t" + b.End() + "\r");
+        }catch(Exception ex){
+        System.err.println("[SAMRECORD] Error with SAM query for: " + b.Chr() + "\t" + b.Start() + "\t" + b.End());
+        ex.printStackTrace();
+        }
+        return w;
+        }).collect(Collectors.toList());*/
+                //.reduce(new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug), (SamRecordMatcher a, SamRecordMatcher b) -> {a.combineRecordMatcher(b); return a;});
+        
+        List<SamRecordMatcher> collect = new ArrayList<SamRecordMatcher>();
+        for(BedSimple b : coords){
+            SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
                 try{
                     SAMFileReader temp = new SAMFileReader(new File(input));
                     temp.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
                     SAMRecordIterator itr = temp.queryContained(b.Chr(), b.Start(), b.End());
-                    itr.forEachRemaining((k) -> w.bufferedAdd(k));
+                    //itr.forEachRemaining((k) -> w.bufferedAdd(k));
+                    while(itr.hasNext()){
+                        w.bufferedAdd(itr.next());
+                    }
                     temp.close();
                     System.out.print("                                                                                        \r");
                     System.out.print("[SAMRECORD] Working on SAM chunk: " + b.Chr() + "\t" + b.Start() + "\t" + b.End() + "\r");
@@ -105,15 +127,16 @@ public class PreprocessMode {
                     System.err.println("[SAMRECORD] Error with SAM query for: " + b.Chr() + "\t" + b.Start() + "\t" + b.End());
                     ex.printStackTrace();
                 }
-                return w;
-            }).collect(Collectors.toList());
-                //.reduce(new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug), (SamRecordMatcher a, SamRecordMatcher b) -> {a.combineRecordMatcher(b); return a;});
-        
+                collect.add(w);
+        }
         
         SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
-        collect.stream().forEachOrdered((s) -> {
+        /*collect.stream().forEachOrdered((s) -> {
+        worker.combineRecordMatcher(s);
+        });*/
+        for(SamRecordMatcher s : collect){
             worker.combineRecordMatcher(s);
-        });
+        }
         reader.close();
         System.out.println(System.lineSeparator() + "[PREPROCESS] Working on Variant calling from SAM data.");
         /*SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
@@ -155,29 +178,45 @@ public class PreprocessMode {
         }
         
         System.err.println("[PREPROCESS] Cleaning up temporary files...");
-        splits.keySet().stream().forEach((s) -> {
+        /*splits.keySet().stream().forEach((s) -> {
+        try{
+        Files.deleteIfExists(Paths.get(splits.get(s).fq1File()));
+        }catch(IOException ex){
+        ex.printStackTrace();
+        }
+        });*/
+        for(String s : splits.keySet()){
             try{
                 Files.deleteIfExists(Paths.get(splits.get(s).fq1File()));
             }catch(IOException ex){
                 ex.printStackTrace();
             }
-        });
-        mfact.getSams().keySet().stream().forEach((s) -> {
+        }
+        
+        /*mfact.getSams().keySet().stream().forEach((s) -> {
+        try{
+        Files.deleteIfExists(Paths.get(s));
+        }catch(IOException ex){
+        ex.printStackTrace();
+        }
+        });*/
+        
+        for(String s : mfact.getSams().keySet()){
             try{
                 Files.deleteIfExists(Paths.get(s));
             }catch(IOException ex){
                 ex.printStackTrace();
             }
-        });
+        }
     }
     
     private List<BedSimple> getSamIntervals(SAMFileHeader h){
         List<BedSimple> coords = new ArrayList<>();
-        coords = h.getSequenceDictionary().getSequences().stream().map((s) -> {
+        /*coords = h.getSequenceDictionary().getSequences().stream().map((s) -> {
             String chr = s.getSequenceName();
             int len = s.getSequenceLength();
             //List<BedSimple> temp = new ArrayList<>();
-            /*if(len < 1000000){
+            if(len < 1000000){
             temp.add(new BedSimple(chr, 0, len));
             return temp.stream();
             }else{
@@ -188,12 +227,19 @@ public class PreprocessMode {
             temp.add(new BedSimple(chr, x, x + 1000000));
             }
             return temp.stream();
-            }*/
+            }
             // I changed this to chromosome lengths in order to avoid instances where
             // reads that mapped on the peripheries of query sites would be lost
             // in the queried samiterator object
             return new BedSimple(chr, 0, len);
-        }).collect(Collectors.toList());
+        }).collect(Collectors.toList());*/
+        
+        for(SAMSequenceRecord s : h.getSequenceDictionary().getSequences()){
+            String chr = s.getSequenceName();
+            int len = s.getSequenceLength();
+            coords.add(new BedSimple(chr, 0,len));
+        }
+        
         return coords;
     }
 }

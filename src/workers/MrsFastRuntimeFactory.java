@@ -83,50 +83,55 @@ public class MrsFastRuntimeFactory{
         //while(!ex.isTerminated()){}
     }
     
-    protected Runnable processStringsToRecords(SAMFileHeader header, String outbase, String rg, String samstr){
-        Runnable r = () ->{
-            SAMRecordFactory recordCreator = new DefaultSAMRecordFactory();
-            SAMFileWriterFactory sfact = new SAMFileWriterFactory();
-            SAMFileWriter bam = sfact.makeBAMWriter(header, false, new File(outbase + "." + rg + ".bam"));
-            TextCigarCodec cd = TextCigarCodec.getSingleton();
-            try(BufferedReader input = Files.newBufferedReader(Paths.get(samstr), Charset.defaultCharset())){
-                String line = null;
-                while((line = input.readLine()) != null){
-                    line = line.trim();
-                    if(line.length() < 10)
-                        continue; // This was an empty line from flawed logic
-                    String[] segs = line.split("\t");
-                    if(segs.length < 9)
-                        continue;
-                    if(segs[9].length() != segs[10].length())
-                        continue; // This was an alignment error.
-                    SAMRecord sam = recordCreator.createSAMRecord(header);
-                    sam.setReadName(segs[0]);
-                    sam.setFlags(Integer.valueOf(segs[1]));
-                    sam.setReferenceName(segs[2]);
-                    sam.setAlignmentStart(Integer.valueOf(segs[3]));
-                    sam.setMappingQuality(Integer.valueOf(segs[4]));
-                    sam.setCigar(cd.decode(segs[5]));
-                    sam.setMateReferenceName(segs[6]);
-                    sam.setMateAlignmentStart(Integer.valueOf(segs[7]));
-                    sam.setInferredInsertSize(Integer.valueOf(segs[8]));
-                    sam.setReadString(segs[9]);
-                    sam.setBaseQualityString(segs[10]);
-                    for(int i = 11; i < segs.length; i++){
-                        String[] tags = segs[i].split(":");
-                        if(StrUtils.NumericCheck.isNumeric(tags[2]) && !tags[0].equals("MD"))
-                            sam.setAttribute(tags[0], Integer.parseInt(tags[2]));
-                        else if(StrUtils.NumericCheck.isFloating(tags[2]))
-                            sam.setAttribute(tags[0], Float.parseFloat(tags[2]));
-                        else
-                            sam.setAttribute(tags[0], tags[2]);
+    protected Runnable processStringsToRecords(final SAMFileHeader header, final String outbase, final String rg, final String samstr){
+        Runnable r = new Runnable(){
+
+            @Override
+            public void run() {
+                SAMRecordFactory recordCreator = new DefaultSAMRecordFactory();
+                SAMFileWriterFactory sfact = new SAMFileWriterFactory();
+                SAMFileWriter bam = sfact.makeBAMWriter(header, false, new File(outbase + "." + rg + ".bam"));
+                TextCigarCodec cd = TextCigarCodec.getSingleton();
+                try(BufferedReader input = Files.newBufferedReader(Paths.get(samstr), Charset.defaultCharset())){
+                    String line = null;
+                    while((line = input.readLine()) != null){
+                        line = line.trim();
+                        if(line.length() < 10)
+                            continue; // This was an empty line from flawed logic
+                        String[] segs = line.split("\t");
+                        if(segs.length < 9)
+                            continue;
+                        if(segs[9].length() != segs[10].length())
+                            continue; // This was an alignment error.
+                        SAMRecord sam = recordCreator.createSAMRecord(header);
+                        sam.setReadName(segs[0]);
+                        sam.setFlags(Integer.valueOf(segs[1]));
+                        sam.setReferenceName(segs[2]);
+                        sam.setAlignmentStart(Integer.valueOf(segs[3]));
+                        sam.setMappingQuality(Integer.valueOf(segs[4]));
+                        sam.setCigar(cd.decode(segs[5]));
+                        sam.setMateReferenceName(segs[6]);
+                        sam.setMateAlignmentStart(Integer.valueOf(segs[7]));
+                        sam.setInferredInsertSize(Integer.valueOf(segs[8]));
+                        sam.setReadString(segs[9]);
+                        sam.setBaseQualityString(segs[10]);
+                        for(int i = 11; i < segs.length; i++){
+                            String[] tags = segs[i].split(":");
+                            if(StrUtils.NumericCheck.isNumeric(tags[2]) && !tags[0].equals("MD"))
+                                sam.setAttribute(tags[0], Integer.parseInt(tags[2]));
+                            else if(StrUtils.NumericCheck.isFloating(tags[2]))
+                                sam.setAttribute(tags[0], Float.parseFloat(tags[2]));
+                            else
+                                sam.setAttribute(tags[0], tags[2]);
+                        }
+                        bam.addAlignment(sam);
                     }
-                    bam.addAlignment(sam);
+                    bam.close();
+                }catch(IOException ex){
+                    ex.printStackTrace();
                 }
-                bam.close();
-            }catch(IOException ex){
-                ex.printStackTrace();
             }
+            
         };
         return r;
     }

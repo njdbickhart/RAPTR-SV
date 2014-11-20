@@ -4,7 +4,6 @@
  */
 package workers;
 
-import dataStructs.BedSet;
 import dataStructs.ReadPair;
 import dataStructs.SetMap;
 import dataStructs.anchorRead;
@@ -24,7 +23,6 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordIterator;
@@ -65,29 +63,39 @@ public class BufferedSetReader {
         int numLines = this.fileEntries.size();
         int counter = 0;
         
-        final SetMap<BufferedInitialSet> dSet = this.fileEntries.parallelStream()
-                .map((s) -> {return this.populateDivets(s);})
-                .sequential()
-                .reduce(new SetMap<>(), (a, b) -> {
-                   a.checkAndCombineMaps(b, chr);
-                   return a;
-                });
+        /*final SetMap<BufferedInitialSet> dSet = this.fileEntries.parallelStream()
+        .map((s) -> {return this.populateDivets(s);})
+        .sequential()
+        .reduce(new SetMap<>(), (a, b) -> {
+        a.checkAndCombineMaps(b, chr);
+        return a;
+        });*/
                 
+        SetMap<BufferedInitialSet> dSet = new SetMap();
+        for(FlatFile s : this.fileEntries){
+            SetMap<BufferedInitialSet> temp = this.populateDivets(s);
+            dSet.checkAndCombineMaps(temp, chr);
+        }
         int divsets = dSet.getCountElements(chr);
         System.out.println("[RPSR INPUT] Finished loading divet sets. Identified: " + divsets + " discordant sets");
         
         System.gc();
         
-        this.finalSets = this.fileEntries.parallelStream()
-                .map((s) -> {
-                    HashMap<String, ArrayList<anchorRead>> anchors = this.populateAnchors(s);
-                    return this.associateSplits(anchors, s);})
-                .sequential()
-                .reduce(dSet, (a, b) -> {
-                    a.checkAndCombineMaps(b, chr);
-                    return a;
-                });
+        /*this.finalSets = this.fileEntries.parallelStream()
+        .map((s) -> {
+        HashMap<String, ArrayList<anchorRead>> anchors = this.populateAnchors(s);
+        return this.associateSplits(anchors, s);})
+        .sequential()
+        .reduce(dSet, (a, b) -> {
+        a.checkAndCombineMaps(b, chr);
+        return a;
+        });*/
         
+        for(FlatFile s : this.fileEntries){
+            HashMap<String, ArrayList<anchorRead>> anchors = this.populateAnchors(s);
+            SetMap<BufferedInitialSet> temp = this.associateSplits(anchors, s);
+            dSet.checkAndCombineMaps(temp, chr);
+        }
         
         System.gc();
         // Now to loop through all of the variant files and associate values

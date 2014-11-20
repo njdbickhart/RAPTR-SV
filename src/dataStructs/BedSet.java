@@ -282,9 +282,12 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
         this.svType = (this.svType == null)? bedSet.svType : this.svType;
         
         bedSet.readSequentialFile();
-        bedSet.pairs.stream().forEach((r) -> {
+        /*bedSet.pairs.stream().forEach((r) -> {
+        this.bufferedAdd(r);
+        });*/
+        for(ReadPair r : bedSet.pairs){
             this.bufferedAdd(r);
-        });
+        }
         bedSet.deleteTemp();
     }
     
@@ -576,7 +579,10 @@ public abstract class BedSet extends BufferedBed implements TempBuffer<BedAbstra
      */
     public ArrayList<String> getReadNames(){
         ArrayList<String> names = new ArrayList<>();
-        this.readNames.keySet().stream().forEach((s) -> names.add(s));
+        /*this.readNames.keySet().stream().forEach((s) -> names.add(s));*/
+        for(String n : this.readNames.keySet()){
+            names.add(n);
+        }
         return names;
     }
     

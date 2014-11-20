@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import net.sf.samtools.BAMIndexer;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
@@ -56,8 +55,13 @@ public class BamMetadataGeneration {
             System.out.println("[METADATA] Could not find bam index file. Creating one now...");
             BAMIndexer b = new BAMIndexer(new File(input + ".bai"), sam.getFileHeader());
             sam.enableFileSource(true);
-            sam.iterator().forEachRemaining((s) -> {
-                b.processAlignment(s);});
+            /*sam.iterator().forEachRemaining((s) -> {
+            b.processAlignment(s);});*/
+            SAMRecordIterator sitr = sam.iterator();
+            while(sitr.hasNext()){
+                b.processAlignment(sitr.next());
+            }
+            
             b.finish();
             sam.close();
             System.out.println("[METADATA] Finished with bam index generation.");
@@ -68,7 +72,10 @@ public class BamMetadataGeneration {
         if(expectRG){
             
             List<SAMReadGroupRecord> temp = header.getReadGroups();
-            temp.forEach((e) -> rgList.add(e.getId()));
+            //temp.forEach((e) -> rgList.add(e.getId()));
+            for(SAMReadGroupRecord e : temp){
+                rgList.add(e.getId());
+            }
         }else
             rgList.add("D");
         
@@ -91,7 +98,7 @@ public class BamMetadataGeneration {
                 continue;
             
             if(!insertSizes.containsKey(rgid))
-                insertSizes.put(rgid, new ArrayList<>(samplimit));
+                insertSizes.put(rgid, new ArrayList<Integer>(samplimit));
             if(insertSizes.get(rgid).size() >= samplimit){
                 if(checkIfSamplingDone(samplimit))
                     break;
@@ -112,10 +119,15 @@ public class BamMetadataGeneration {
      */
     public Map<String, DivetOutputHandle> generateDivetOuts(String outbase){
         Map<String, DivetOutputHandle> holder = new ConcurrentHashMap<>();
-        this.rgList.stream().forEach((s) -> {
+        /*this.rgList.stream().forEach((s) -> {
+        holder.put(s, new DivetOutputHandle(outbase + "." + s + ".divet"));
+        holder.get(s).OpenHandle();
+        });*/
+        for(String s : this.rgList){
             holder.put(s, new DivetOutputHandle(outbase + "." + s + ".divet"));
             holder.get(s).OpenHandle();
-        });
+        }
+        
         return holder;
     }
     
@@ -128,10 +140,14 @@ public class BamMetadataGeneration {
      */
     public Map<String, SplitOutputHandle> generateSplitOuts(String outbase){
         Map<String, SplitOutputHandle> holder = new ConcurrentHashMap<>();
-        this.rgList.stream().forEach((s) -> {
+        /*this.rgList.stream().forEach((s) -> {
+        holder.put(s, new SplitOutputHandle(outbase + "." + s + ".split.fq", outbase + "." + s + ".anchor.bam", header));
+        holder.get(s).OpenAnchorHandle();
+        });*/
+        for(String s : this.rgList){
             holder.put(s, new SplitOutputHandle(outbase + "." + s + ".split.fq", outbase + "." + s + ".anchor.bam", header));
             holder.get(s).OpenAnchorHandle();
-        });
+        }
         return holder;
     }
 
@@ -153,16 +169,54 @@ public class BamMetadataGeneration {
         // Due to some issues where repeats map all over the reference genome
         // I'm going to have to alter this routine to take a median estimation 
         // and a MAD 
-        this.insertSizes.keySet().stream().forEach((r) -> {
+        /*this.insertSizes.keySet().stream().forEach((r) -> {
+        int median = stats.MedianAbsoluteDeviation.Median(this.insertSizes.get(r));
+        int mad = stats.MedianAbsoluteDeviation.MAD(this.insertSizes.get(r));
+        List<Integer> filtered = this.insertSizes.get(r).stream()
+        .filter(s -> s < median + (mad * 20))
+        .collect(Collectors.toList());
+        
+        long fvalues = this.insertSizes.get(r).parallelStream()
+        .filter(s -> s > median + (mad * 20))
+        .count();
+        
+        if(fvalues > 0)
+        System.err.println("[METADATA] Identified " + fvalues + " sampled insert lengths greater than a Median (" + median + ") * 10 MAD (" + mad + ") in RG:" + r);
+        
+        double avg = stats.StdevAvg.IntAvg(filtered);
+        double stdev = stats.StdevAvg.stdevInt(avg, filtered);
+        Double[] d = {avg, stdev};
+        this.values.put(r, d);
+        int lower = (int) Math.round(avg - (3 * stdev));
+        int upper = (int) Math.round(avg + (3 * stdev));
+        if(lower < 0)
+        lower = 0;
+        Integer[] v = {lower, upper, maxdist};
+        vs.put(r, v);
+        });*/
+        
+        for(String r : this.insertSizes.keySet()){
             int median = stats.MedianAbsoluteDeviation.Median(this.insertSizes.get(r));
             int mad = stats.MedianAbsoluteDeviation.MAD(this.insertSizes.get(r));
-            List<Integer> filtered = this.insertSizes.get(r).stream()
-                    .filter(s -> s < median + (mad * 20))
-                    .collect(Collectors.toList());
+            /*List<Integer> filtered = this.insertSizes.get(r).stream()
+            .filter(s -> s < median + (mad * 20))
+            .collect(Collectors.toList());*/
             
-            long fvalues = this.insertSizes.get(r).parallelStream()
-                    .filter(s -> s > median + (mad * 20))
-                    .count();
+            List<Integer> filtered = new ArrayList<Integer>();
+            for(int s : this.insertSizes.get(r)){
+                if(s < median + (mad * 20))
+                    filtered.add(s);
+            }
+            
+            /*long fvalues = this.insertSizes.get(r).parallelStream()
+            .filter(s -> s > median + (mad * 20))
+            .count();*/
+            
+            long fvalues = 0;
+            for(int s : this.insertSizes.get(r)){
+                if(s > median + (mad * 20))
+                    fvalues++;
+            }
             
             if(fvalues > 0)
                 System.err.println("[METADATA] Identified " + fvalues + " sampled insert lengths greater than a Median (" + median + ") * 10 MAD (" + mad + ") in RG:" + r);
@@ -177,16 +231,22 @@ public class BamMetadataGeneration {
                 lower = 0;
             Integer[] v = {lower, upper, maxdist};
             vs.put(r, v);
-        });
+        }
         return vs;
     }
     private boolean checkIfSamplingDone(int samplimit){      
-        int num = this.rgList.stream()
-                .filter((r) -> (insertSizes.containsKey(r)))
-                .filter((r) -> (insertSizes.get(r).size() >= samplimit))
-                .map((r) -> 1)
-                .reduce(0, (sum, next) -> sum + next);
+        /*int num = this.rgList.stream()
+        .filter((r) -> (insertSizes.containsKey(r)))
+        .filter((r) -> (insertSizes.get(r).size() >= samplimit))
+        .map((r) -> 1)
+        .reduce(0, (sum, next) -> sum + next);*/
         
+        int num = 0;
+        for(String r : this.rgList){
+            if(insertSizes.containsKey(r) && insertSizes.get(r).size() >= samplimit){
+                num += 1;
+            }
+        }
         return num >= this.rgList.size();
     }
 

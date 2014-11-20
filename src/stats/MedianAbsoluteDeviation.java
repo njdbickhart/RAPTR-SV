@@ -9,7 +9,6 @@ package stats;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  *
@@ -18,9 +17,13 @@ import java.util.stream.Collectors;
 public class MedianAbsoluteDeviation {
     public static int MAD(ArrayList<Integer> values){
         int med = Median(values);
-        List<Integer> deviations = values.stream()
-                .map((s) -> {return Math.abs(med - s);})
-                .collect(Collectors.toList());
+        /*List<Integer> deviations = values.stream()
+        .map((s) -> {return Math.abs(med - s);})
+        .collect(Collectors.toList());*/
+        List<Integer> deviations = new ArrayList<>();
+        for(int s : values){
+            deviations.add(Math.abs(med - s));
+        }
         return Median(deviations);
     }
     

@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.sf.samtools.Cigar;
+import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFormatException;
 import net.sf.samtools.SAMReadGroupRecord;
@@ -145,12 +146,19 @@ public class SamRecordMatcher extends TempDataClass {
     }
     
     public synchronized void combineRecordMatcher(SamRecordMatcher s){
-        s.SamTemp.keySet().forEach((k) -> {
+        /*s.SamTemp.keySet().forEach((k) -> {
+        if(!this.SamTemp.containsKey(k)){
+        this.SamTemp.put(k, new SamOutputHandle(this.threshold, k, this.tempOutBase));
+        }
+        this.SamTemp.get(k).combineTempFiles(s.SamTemp.get(k));
+        });*/
+        
+        for(String k : s.SamTemp.keySet()){
             if(!this.SamTemp.containsKey(k)){
                 this.SamTemp.put(k, new SamOutputHandle(this.threshold, k, this.tempOutBase));
             }
             this.SamTemp.get(k).combineTempFiles(s.SamTemp.get(k));
-        });
+        }
     }
     
     public void convertToVariant(Map<String, DivetOutputHandle> divets, Map<String, SplitOutputHandle> splits){
@@ -159,7 +167,17 @@ public class SamRecordMatcher extends TempDataClass {
         
         anchorlookup = new ConcurrentHashMap<>();
         try {
-            this.SamTemp.keySet().parallelStream().forEach((String s) -> {
+            /*this.SamTemp.keySet().parallelStream().forEach((String s) -> {
+            try{
+            TempFileSorter(splits.get(s), divets.get(s), s, SamTemp.get(s));
+            }catch(InterruptedException | IOException ex){
+            Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+            }catch(Exception ex){
+            Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            });*/
+            
+            for (String s : this.SamTemp.keySet()){
                 try{
                     TempFileSorter(splits.get(s), divets.get(s), s, SamTemp.get(s));
                 }catch(InterruptedException | IOException ex){
@@ -167,7 +185,7 @@ public class SamRecordMatcher extends TempDataClass {
                 }catch(Exception ex){
                     Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
                 }
-            });
+            }
             if(debug)
                 this.debugWriter.close();
         } catch (IOException ex) {
@@ -198,7 +216,14 @@ public class SamRecordMatcher extends TempDataClass {
             // clone name is not the same as the last one
             if(!segs[0].equals(last)){
                 if(!records.isEmpty()){
-                    if(records.stream().anyMatch((s) -> isSplit(s))){
+                    boolean match = false;
+                    for(String[] s : records){
+                        if(isSplit(s)){
+                            match = true;
+                            break;
+                        }
+                    }
+                    if(match){
                         int scount = 0, acount = 0;
                         for(String[] r : records){
                             if(this.isAnchor(r)){
@@ -218,7 +243,7 @@ public class SamRecordMatcher extends TempDataClass {
                             // Store the information we need to get the anchors next round
                             String[] temp = records.get(0);
                             if(!anchorlookup.containsKey(rg))
-                                anchorlookup.put(rg, new HashMap<>());
+                                anchorlookup.put(rg, new HashMap<String, Short>());
                             anchorlookup.get(rg).put(temp[0], this.flipCloneNum(Short.parseShort(temp[1])));
                         }
                     }
@@ -226,9 +251,25 @@ public class SamRecordMatcher extends TempDataClass {
                     if(records.size() > 1){
                         Integer[] t = thresholds.get(rg);
                         SamToDivet converter = new SamToDivet(last, t[0], t[1], t[2]);
-                        records.stream().forEach((r) -> {
+                        /*records.stream().forEach((r) -> {
+                        // Process the XAZTag if it exists
+                        processXAZTag(r).stream().forEach((n) -> {converter.addLines(n);});
+                        converter.addLines(r);
+                        try{
+                        if(debug)
+                        this.debugWriter.write("Disc\t" + StrUtils.StrArray.Join(r, "\t") + System.lineSeparator());
+                        }catch(IOException ex){
+                        ex.printStackTrace();
+                        }
+                        });*/
+                        
+                        for(String[] r : records){
                             // Process the XAZTag if it exists
-                            processXAZTag(r).stream().forEach((n) -> {converter.addLines(n);});
+                            //processXAZTag(r).stream().forEach((n) -> {converter.addLines(n);});
+                            ArrayList<String[]> tags = processXAZTag(r);
+                            for(String[] s : tags){
+                                converter.addLines(s);
+                            }
                             converter.addLines(r);
                             try{
                                 if(debug)
@@ -236,7 +277,7 @@ public class SamRecordMatcher extends TempDataClass {
                             }catch(IOException ex){
                                 ex.printStackTrace();
                             }
-                        });
+                        }
                         converter.processLinesToDivets();
                         divets.PrintDivetOut(converter.getDivets());
                     }
@@ -255,7 +296,11 @@ public class SamRecordMatcher extends TempDataClass {
     
     public void RetrieveMissingAnchors(Map<String, SplitOutputHandle> splits, SAMRecordIterator samItr){
         if(!this.anchorlookup.isEmpty()){
-            int anchorcount = this.anchorlookup.keySet().stream().map((s) -> anchorlookup.get(s).keySet().size()).reduce(0,Integer::sum);
+            //int anchorcount = this.anchorlookup.keySet().stream().map((s) -> anchorlookup.get(s).keySet().size()).reduce(0,Integer::sum);
+            int anchorcount = 0;
+            for(String s : anchorlookup.keySet()){
+                anchorcount += anchorlookup.get(s).keySet().size();
+            }
             System.err.println("[RECORD MATCHER] Identified " + anchorcount + " soft clipped reads that need anchors identified.");
             //Map<String, Boolean> anchorfound = anchorlookup.values().stream()
             //    .map(Map::keySet)
@@ -295,13 +340,20 @@ public class SamRecordMatcher extends TempDataClass {
                     }
                 }
             }
-            long found = anchorfound.keySet().stream().filter((e) -> anchorfound.get(e)).count();
+            //long found = anchorfound.keySet().stream().filter((e) -> anchorfound.get(e)).count();
+            int found = 0;
+            for(String e : anchorfound.keySet()){
+                found++;
+            }
             long notfound = (long)anchorfound.size() - found;
             System.err.println("[RECORD MATCHER] Collected: " + found + " anchor reads and missed " + notfound + " out of " + anchorfound.size() + " original values");
         }
         samItr.close();
         // We close the anchor handle here just in case there were additional anchor entries to add.
-        splits.keySet().stream().forEach((s) -> splits.get(s).CloseAnchorHandle());
+        //splits.keySet().stream().forEach((s) -> splits.get(s).CloseAnchorHandle());
+        for(String s : splits.keySet()){
+            splits.get(s).CloseAnchorHandle();
+        }
     }
     
     private short flipCloneNum(short a){
@@ -316,10 +368,17 @@ public class SamRecordMatcher extends TempDataClass {
     }
     
     private int getCigarSoftClips(Cigar c){
-        return c.getCigarElements()
-                .stream()
-                .filter((s) -> s.getOperator().equals(CigarOperator.S) || s.getOperator().equals(CigarOperator.SOFT_CLIP))
-                .map((s) -> s.getLength()).reduce(0, Integer::sum);
+        /*return c.getCigarElements()
+        .stream()
+        .filter((s) -> s.getOperator().equals(CigarOperator.S) || s.getOperator().equals(CigarOperator.SOFT_CLIP))
+        .map((s) -> s.getLength()).reduce(0, Integer::sum);*/
+        int clips = 0;
+        for(CigarElement s : c.getCigarElements()){
+            if(s.getOperator().equals(CigarOperator.S) || s.getOperator().equals(CigarOperator.SOFT_CLIP)){
+                clips += s.getLength();
+            }
+        }
+        return clips;
     }
     
     private boolean isSplit(String[] segs){
