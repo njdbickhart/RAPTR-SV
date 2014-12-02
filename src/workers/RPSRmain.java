@@ -13,7 +13,7 @@ import modes.PreprocessMode;
  * @author bickhart
  */
 public class RPSRmain {
-    private static final String version = "0.0.2";
+    private static final String version = "0.0.3";
 
     /**
      * @param args the command line arguments
@@ -53,9 +53,9 @@ public class RPSRmain {
     
     private static SimpleModeCmdLineParser PrepareCMDOptions(){
         String nl = System.lineSeparator();
-        SimpleModeCmdLineParser cmd = new SimpleModeCmdLineParser("RPSR.jar\tA tool to cluster split and paired end reads" + nl
+        SimpleModeCmdLineParser cmd = new SimpleModeCmdLineParser("RAPTR-SV\tA tool to cluster split and paired end reads" + nl
                 + "Version: " + version + nl
-            + "Usage: java -jar RPSR.jar [mode] [mode specific options]" + nl
+            + "Usage: java -jar RAPTR-SV.jar [mode] [mode specific options]" + nl
                 + "Modes:" + nl
                 + "\tpreprocess\tInterprets BAM files to generate metadata for \"cluster\" mode" + nl 
                 + "\tcluster\t\tThe mode that processes metadata generated from the main program" + nl,
@@ -64,8 +64,8 @@ public class RPSRmain {
         );
         
         cmd.AddMode("cluster", 
-                "RPSR cluster mode" + nl +
-                "Usage: java -jar RPSR.jar cluster [-s filelist -c chromosome -g gap file -o output prefix] (optional: -g gmsfile list, -b buffer size)" + nl
+                "RAPTR-SV cluster mode" + nl +
+                "Usage: java -jar RAPTR-SV.jar cluster [-s filelist -c chromosome -g gap file -o output prefix] (optional: -g gmsfile list, -b buffer size)" + nl
                 + "\t-s\tFlatfile containing records from the same reads" + nl
                 + "\t-c\tChromosome to be processed" + nl
                 + "\t-g\tAssembly Gap bed file" + nl
@@ -82,8 +82,8 @@ public class RPSRmain {
                 "flatfile", "chromosome", "gapfile", "outbase", "pfilter", "filter", "buffer", "debug", "thresh", "threads", "temp");
         
         cmd.AddMode("preprocess", 
-                "RPSR preprocess mode" + nl +
-                "Usage: java -jar RPSR.jar preprocess [-i input bam -o output base name -r ref genome] (optional argugments)" + nl
+                "RAPTR-SV preprocess mode" + nl +
+                "Usage: java -jar RAPTR-SV.jar preprocess [-i input bam -o output base name -r ref genome] (optional argugments)" + nl
                 + "\t-i\tInput BWA-aligned BAM file" + nl
                 + "\t-o\tThe base output name and directory (all output files will start with this name)" + nl
                 + "\t-r\tA MrsFAST indexed reference genome fasta file for realignment" + nl
