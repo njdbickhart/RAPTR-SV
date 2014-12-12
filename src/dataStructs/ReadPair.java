@@ -188,12 +188,12 @@ public class ReadPair extends WeightedBed{
     private void convertDisc(String[] segs){
         this.rFlags.add(readEnum.IsDisc);
         try {
-            initialVals(segs[1], segs[2], segs[6]);
+            initialVals(segs[1], segs[2], segs[7]);
         } catch (BedFileException ex) {
             Logger.getLogger(divet.class.getName()).log(Level.SEVERE, null, ex);
         }
         this.innerStart = Integer.parseInt(segs[3]);
-        this.innerEnd = Integer.parseInt(segs[5]);
+        this.innerEnd = Integer.parseInt(segs[6]);
         // Ensure that the numbers are formatted correctly!
         this.reformatNums();
         
@@ -203,14 +203,14 @@ public class ReadPair extends WeightedBed{
             this.rFlags.add(readEnum.FirstReverse);
         }
         
-        if(segs[7].equals("F")){
+        if(segs[8].equals("F")){
             this.rFlags.add(readEnum.SecondForward);
         }else{
             this.rFlags.add(readEnum.SecondReverse);
         }
         
-        this.ProbBasedPhred = Double.parseDouble(segs[11]);
-        strToEnum(segs[8]);
+        this.ProbBasedPhred = Double.parseDouble(segs[12]);
+        strToEnum(segs[9]);
         this.name = segs[0].trim();
     }
     

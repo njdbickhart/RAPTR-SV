@@ -95,7 +95,7 @@ public class SamToDivet {
                 
                 double avgphred = stats.calcAvgPhred.calcAvgPhred(first[12], sec[12]);
                 
-                divet d = new divet(clone, fchr, fstart, fend, forient, 
+                divet d = new divet(clone, fchr, fstart, fend, forient, schr,
                         sstart, send, sorient, 
                         svcall, String.valueOf((fedit + sedit) / 2d), String.valueOf(avgphred), 
                         String.valueOf((sprob + fprob) / 2d), String.valueOf(concordant));

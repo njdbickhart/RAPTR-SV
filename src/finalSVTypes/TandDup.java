@@ -7,7 +7,6 @@ package finalSVTypes;
 import dataStructs.callEnum;
 import java.util.HashSet;
 import setWeightCover.BufferedInitialSet;
-import setWeightCover.InitialSet;
 import setWeightCover.finalSets;
 
 /**

@@ -4,7 +4,6 @@
  */
 package workers;
 
-import dataStructs.BedSet;
 import dataStructs.ReadPair;
 import dataStructs.SetMap;
 import dataStructs.anchorRead;
@@ -24,7 +23,6 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordIterator;
@@ -140,14 +138,14 @@ public class BufferedSetReader {
             String[] segs;
             while((line = divetReader.readLine()) != null){
                 segs = line.split("\t");
-                if(segs.length < 12)
+                if(segs.length < 13)
                     continue;
                 
                 if(!(segs[1].equals(this.chr))){
                     continue;
                 }
                 divMaps.addRead(segs[0].trim());
-                if(!segs[12].equals("1") && Double.valueOf(segs[11]) > pfilter){
+                if(!segs[13].equals("1") && Double.valueOf(segs[12]) > pfilter){
                     ReadPair rp = new ReadPair(line, file, readEnum.IsDisc);
                     tempholder.add(rp);
                 }
