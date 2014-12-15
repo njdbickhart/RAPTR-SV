@@ -34,7 +34,7 @@ public class SamToDivet {
         this.lines.add(line);
     }
     
-    public void processLinesToDivets() throws Exception{
+    public void processLinesToDivets() {
         Map<Short, ArrayList<String[]>> holder = new HashMap<>();
         // Put lines into temporary holder for numerical sorting
         for(String[] array : lines){
@@ -46,13 +46,17 @@ public class SamToDivet {
         
         // Since we know that there should be only two keys, lets grab the first one
         short comp = 1;
-        if(!holder.containsKey(comp))
-            throw new Exception("Sam file did not have a first clone!");
-        
+        if(!holder.containsKey(comp)){
+            System.err.println("Sam file did not have a first clone!");
+            return;
+        }
+            
         short second = 2;
-        if(!holder.containsKey(second))
-            throw new Exception("Sam file did not have a second clone!");
-        
+        if(!holder.containsKey(second)){
+            System.err.println("Sam file did not have a second clone!");
+            return;
+        }
+            
         // Divet file format:
     // 20VQ5P1:104:D09KFACXX:7:2106:7435:121010:0      chr27   23699238        23699288        F       23695946        23695996        F       delinv  0       37.47  1.00000000000000000000   1
         
