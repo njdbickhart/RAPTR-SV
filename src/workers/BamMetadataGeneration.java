@@ -28,8 +28,8 @@ import net.sf.samtools.SAMRecordIterator;
  */
 public class BamMetadataGeneration {
     private final List<String> rgList = new ArrayList<>();
-    private HashMap<String, Double[]> values = new HashMap<>();
-    private HashMap<String, ArrayList<Integer>> insertSizes = new HashMap<>();
+    private final HashMap<String, Double[]> values = new HashMap<>();
+    private final HashMap<String, ArrayList<Integer>> insertSizes = new HashMap<>();
     private SAMFileHeader header;
     private final boolean expectRG;
     

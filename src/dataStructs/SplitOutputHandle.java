@@ -12,6 +12,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sf.samtools.CigarElement;
@@ -32,18 +33,20 @@ public class SplitOutputHandle {
     private final Path fq1path;
     private final Path anchorpath;
     private BufferedWriter fq1;
-    private SAMFileWriterFactory anchor = new SAMFileWriterFactory();
-    private SAMRecordFactory recordCreator = new DefaultSAMRecordFactory();
+    private final SAMFileWriterFactory anchor = new SAMFileWriterFactory();
+    private final SAMRecordFactory recordCreator = new DefaultSAMRecordFactory();
     private SAMFileWriter anchorOut;
     private final SAMFileHeader header;
     private boolean fileopen = false;
-    private TextCigarCodec cd = TextCigarCodec.getSingleton();
+    private final TextCigarCodec cd = TextCigarCodec.getSingleton();
     
     public SplitOutputHandle(String file, String file2, SAMFileHeader sam){
         fq1path = Paths.get(file);
         anchorpath = Paths.get(file2);
         header = sam;
-        this.OpenFQHandle();
+        //this.OpenFQHandle();
+        
+        //TODO: make this a buffer in order and close file handles in an orderly fashion
     }
     
     public synchronized void AddAnchor(String[] segs){
@@ -93,6 +96,8 @@ public class SplitOutputHandle {
     }
     
     public synchronized void AddSplit(String[] segs){
+        if(!fileopen)
+            this.OpenFQHandle();
         String nl = System.lineSeparator();
         String rn1 = "@" + segs[2] + "_1";
         String rn2 = "@" + segs[2] + "_2";
@@ -136,7 +141,7 @@ public class SplitOutputHandle {
     
     private void OpenFQHandle(){
         try{
-            fq1 = Files.newBufferedWriter(fq1path, Charset.defaultCharset());
+            fq1 = Files.newBufferedWriter(fq1path, Charset.defaultCharset(), StandardOpenOption.APPEND);
         }catch(IOException ex){
             ex.printStackTrace();
         }

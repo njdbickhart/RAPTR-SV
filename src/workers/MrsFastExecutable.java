@@ -7,14 +7,10 @@
 package workers;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -95,6 +91,7 @@ public class MrsFastExecutable implements Callable<String>{
         }).start();
         
         p.waitFor();
+        p.destroy();
         Files.deleteIfExists(Paths.get(sam + ".nohit"));
         return sam;
     }
@@ -121,11 +118,13 @@ public class MrsFastExecutable implements Callable<String>{
             if(p.isAlive())
                 p.destroyForcibly();
             p.waitFor();
+            
         } catch (IOException ex) {
             Logger.getLogger(MrsFastExecutable.class.getName()).log(Level.SEVERE, null, ex);
         } catch(Exception ex){
             Logger.getLogger(MrsFastExecutable.class.getName()).log(Level.SEVERE, null, ex);
-        }     
+        }   
+        
         return false;
     }
 }
