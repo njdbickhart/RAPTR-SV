@@ -161,7 +161,17 @@ public class SamRecordMatcher extends TempDataClass {
         try {
             this.SamTemp.keySet().parallelStream().forEach((String s) -> {
                 try{
+                    // Orderly open files
+                    splits.get(s).OpenAnchorHandle();
+                    splits.get(s).OpenFQHandle();
+                    divets.get(s).OpenHandle();
+                    
                     TempFileSorter(splits.get(s), divets.get(s), s, SamTemp.get(s));
+                    
+                    // Close files to reduce number of open file handles later
+                    divets.get(s).CloseHandle();
+                    splits.get(s).CloseAnchorHandle();
+                    splits.get(s).CloseFQHandle();
                 }catch(InterruptedException | IOException ex){
                     Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
                 }catch(Exception ex){

@@ -63,7 +63,7 @@ public class MrsFastRuntimeFactory{
         
         // Now convert all of those sams to bams in a threaded fashion
         //ex = Executors.newFixedThreadPool(threads);
-        SAMFileWriterFactory sfact = new SAMFileWriterFactory();
+        //SAMFileWriterFactory sfact = new SAMFileWriterFactory();
         for(String rg : handles.keySet()){
             try {
                 String samstr = sams.get(rg).get();

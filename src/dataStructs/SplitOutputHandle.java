@@ -139,7 +139,7 @@ public class SplitOutputHandle {
         return readlen / 2; // We couldn't find a good softclip, so let's just return half the read length
     }
     
-    private void OpenFQHandle(){
+    public void OpenFQHandle(){
         try{
             fq1 = Files.newBufferedWriter(fq1path, Charset.defaultCharset(), StandardOpenOption.APPEND);
         }catch(IOException ex){
@@ -163,7 +163,8 @@ public class SplitOutputHandle {
     }
     
     public void CloseAnchorHandle(){
-        anchorOut.close();
+        if(fileopen)
+            anchorOut.close();
         fileopen = false;
     }
         

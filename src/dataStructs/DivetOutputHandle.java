@@ -38,7 +38,8 @@ public class DivetOutputHandle {
     
     public void CloseHandle(){
         try{
-            out.close();
+            if(fileopen)
+                out.close();
         }catch(IOException ex){
             ex.printStackTrace();
         }
