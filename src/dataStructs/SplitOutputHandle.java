@@ -141,7 +141,7 @@ public class SplitOutputHandle {
     
     public void OpenFQHandle(){
         try{
-            fq1 = Files.newBufferedWriter(fq1path, Charset.defaultCharset(), StandardOpenOption.APPEND);
+            fq1 = Files.newBufferedWriter(fq1path, Charset.defaultCharset());
         }catch(IOException ex){
             ex.printStackTrace();
         }
