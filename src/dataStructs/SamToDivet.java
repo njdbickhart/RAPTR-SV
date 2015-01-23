@@ -47,13 +47,13 @@ public class SamToDivet {
         // Since we know that there should be only two keys, lets grab the first one
         short comp = 1;
         if(!holder.containsKey(comp)){
-            System.err.println("Sam file did not have a first clone!");
+            //System.err.println("Sam file did not have a first clone!");
             return;
         }
             
         short second = 2;
         if(!holder.containsKey(second)){
-            System.err.println("Sam file did not have a second clone!");
+            //System.err.println("Sam file did not have a second clone!");
             return;
         }
             
