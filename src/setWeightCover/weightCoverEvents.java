@@ -113,6 +113,9 @@ public class weightCoverEvents{
         removal = this.setRemoval(removal);
         
         for(int z = 0; z < initialSize; z++){
+            if(this.inputSets.isEmpty()){
+                break;
+            }
             // Now sort list of elements for the weight cover algorithm 
             Collections.sort(this.inputSets, (BufferedInitialSet t, BufferedInitialSet t1) -> {
                 if(t.sumFullSupport < t1.sumFullSupport) {
@@ -181,9 +184,9 @@ public class weightCoverEvents{
             for(int x = 0; x < toRemove.size(); x++){
             this.inputSets.remove(toRemove.get(x));
             }*/
-            if(this.inputSets.isEmpty()){
-                break;
-            }
+            /*if(this.inputSets.isEmpty()){
+            break;
+            }*/
             
             System.out.print("[RPSR WEIGHT] Working on set number: " + removal + " of " + initialSize + " and have retained: " + z + "\r");
         }
