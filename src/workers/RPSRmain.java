@@ -5,8 +5,15 @@
 package workers;
 
 import GetCmdOpt.SimpleModeCmdLineParser;
+import java.io.IOException;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import modes.ClusterMode;
 import modes.PreprocessMode;
+import stats.LogFormat;
 
 /**
  *
@@ -14,11 +21,13 @@ import modes.PreprocessMode;
  */
 public class RPSRmain {
     private static final String version = "0.0.6";
-
+    private static final Logger log = Logger.getLogger(RPSRmain.class.getName());
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        
+        
         // Prepare and read command line options
         SimpleModeCmdLineParser cmd = PrepareCMDOptions();        
         cmd.GetAndCheckMode(args);
@@ -33,12 +42,16 @@ public class RPSRmain {
             System.out.println("[MAIN] Setting ForkJoin thread ceiling to: " + cmd.GetValue("t"));
         }
         
+        boolean debug = cmd.GetValue("debug").equals("true");
+        
         switch(cmd.CurrentMode){
             case "cluster":
+                setFileHandler("cluster", args, debug);
                 ClusterMode cluster = new ClusterMode(cmd);
                 cluster.run();
                 break;
             case "preprocess":
+                setFileHandler("preprocess", args, debug);
                 PreprocessMode preprocess = new PreprocessMode(cmd);
                 preprocess.run();
                 break;
@@ -49,6 +62,36 @@ public class RPSRmain {
         }
         
         System.exit(0);
+    }
+
+    private static void setFileHandler(String type, String[] args, boolean debug) {
+        // Create a log file and set levels for use with debugger
+        FileHandler handler = null;
+        ConsoleHandler console = null;
+        try {
+            handler = new FileHandler("RAPTR-SV." + type + ".%u.%g.log");
+            handler.setFormatter(new LogFormat());
+            console = new ConsoleHandler();
+            if(debug){
+                handler.setLevel(Level.ALL);
+                console.setLevel(Level.INFO);
+            }else{
+                handler.setLevel(Level.INFO);
+                console.setLevel(Level.WARNING);
+            }
+        } catch (IOException | SecurityException ex) {
+            Logger.getLogger(RPSRmain.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        Logger mainLog = Logger.getLogger("");
+        for(Handler h : mainLog.getHandlers()){
+            mainLog.removeHandler(h);
+        }
+        mainLog.addHandler(handler);
+        mainLog.addHandler(console);
+        
+        // Log input arguments
+        log.log(Level.INFO, "[MAIN] Command line arguments supplied: ");
+        log.log(Level.INFO, StrUtils.StrArray.Join(args, " "));
     }
     
     private static SimpleModeCmdLineParser PrepareCMDOptions(){

@@ -49,6 +49,8 @@ public class BufferedSetReader {
     private final ReadNameUtility rn = new ReadNameUtility();
     private final double pfilter;
     
+    private static final Logger log = Logger.getLogger(BufferedSetReader.class.getName());
+    
     public BufferedSetReader(ArrayList<FlatFile> files, String gapFile, String chr, int buffer, double pfilter){
         // First, let's load the data file locations and create the gap intersection
         // tool.
@@ -62,25 +64,31 @@ public class BufferedSetReader {
         int counter = 0;
         
         final SetMap<BufferedInitialSet> dSet = this.fileEntries.parallelStream()
-                .map((s) -> {return this.populateDivets(s);})
+                .map((s) -> {
+                    log.log(Level.INFO, "[BUFFSET] Working on Flatfile divet file: " + s.getDivet().toString());
+                    return this.populateDivets(s);})
                 .sequential()
                 .reduce(new SetMap<>(), (a, b) -> {
                    a.checkAndCombineMaps(b, chr);
+                   log.log(Level.INFO, "[BUFFSET] Divet reduction produced number of sets: " + a.getUnsortedBedList(chr));
                    return a;
                 });
                 
         int divsets = dSet.getCountElements(chr);
-        System.out.println("[RPSR INPUT] Finished loading divet sets. Identified: " + divsets + " discordant sets");
+        System.out.println("[RAPTR-SV INPUT] Finished loading divet sets. Identified: " + divsets + " discordant sets");
+        log.log(Level.INFO, "[BUFFSET] Loaded " + divsets + " divet sets in total.");
         
         System.gc();
         
         this.finalSets = this.fileEntries.parallelStream()
                 .map((s) -> {
+                    log.log(Level.INFO, "[BUFFSET] Working on Flatfile split file: " + s.getSplitsam().toString());
                     HashMap<String, ArrayList<anchorRead>> anchors = this.populateAnchors(s);
                     return this.associateSplits(anchors, s);})
                 .sequential()
                 .reduce(dSet, (a, b) -> {
                     a.checkAndCombineMaps(b, chr);
+                    log.log(Level.INFO, "[BUFFSET] Split reduction produced number of sets: " + a.getUnsortedBedList(chr));
                     return a;
                 });
         
@@ -114,7 +122,8 @@ public class BufferedSetReader {
         
         }*/
         int finSets = this.finalSets.getCountElements(chr);
-        System.out.println("[RPSR INPUT] Finished loading all files! Final Sets: " + finSets + ".");
+        System.out.println("[RAPTR-SV INPUT] Finished loading all files! Final Sets: " + finSets + ".");
+        log.log(Level.INFO, "[BUFFSET] Final number of sets: " + finSets);
     }
     /*
      * Getters
@@ -152,12 +161,14 @@ public class BufferedSetReader {
             Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
         }
         
+        int gapCount = 0;
         for(ReadPair d : tempholder){
             //this.divetcounter++;
             d.setMapCount(divMaps.retMap(d.Name()));
             if(this.useGapOverlap){
                 if(gaps.checkGapOverlap(d)){
                     // This read pair spanned a gap! Nothing to see here...
+                    gapCount++;
                     continue;
                 }
             }
@@ -168,6 +179,7 @@ public class BufferedSetReader {
             }
         }
         //System.out.println("[VHSR INPUT] Finished loading " + this.divets.size() + " discordant read pairs");
+        log.log(Level.INFO, "[BUFFSET] Identified " + gapCount + " gap file overlaps.");
         return tSet;
     }
     
