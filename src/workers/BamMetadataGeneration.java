@@ -52,6 +52,7 @@ public class BamMetadataGeneration {
      */
     public void ScanFile(String input, int samplimit){
         SAMFileReader sam = new SAMFileReader(new File(input));
+        sam.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
         if(!sam.hasIndex()){
             System.out.println("[METADATA] Could not find bam index file. Creating one now...");
             BAMIndexer b = new BAMIndexer(new File(input + ".bai"), sam.getFileHeader());
@@ -63,7 +64,7 @@ public class BamMetadataGeneration {
             System.out.println("[METADATA] Finished with bam index generation.");
             sam = new SAMFileReader(new File(input));
         }
-        sam.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
+        //sam.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
         header = sam.getFileHeader();
         if(expectRG){
             
