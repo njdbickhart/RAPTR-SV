@@ -14,9 +14,6 @@ import dataStructs.splitRead;
 import gziputils.ReaderReturn;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,7 +35,7 @@ public class BufferedSetReader {
     private final String chr;
     private final int buffer;
     
-    private final ArrayList<FlatFile> fileEntries = new ArrayList<>();
+    private final ArrayList<FlatFile> fileEntries;
     private final SetMap<BufferedInitialSet> sets = new SetMap<>();
     private SetMap<BufferedInitialSet> finalSets = new SetMap<>();
     
@@ -48,15 +45,16 @@ public class BufferedSetReader {
     //private HashMap<String, ArrayList<anchorRead>> anchors;
     private final readNameMappings anchorMaps = new readNameMappings();
     private GapOverlap gaps;
+    private boolean useGapOverlap = false;
     private final ReadNameUtility rn = new ReadNameUtility();
     private final double pfilter;
     
-    public BufferedSetReader(String flatFile, String gapFile, String chr, int buffer, double pfilter){
+    public BufferedSetReader(ArrayList<FlatFile> files, String gapFile, String chr, int buffer, double pfilter){
         // First, let's load the data file locations and create the gap intersection
         // tool.
         this.buffer = buffer;
         this.chr = chr;
-        this.identifyFiles(flatFile);
+        this.fileEntries = files;
         this.createGapOverlapTool(gapFile);
         this.pfilter = pfilter;
         
@@ -157,9 +155,11 @@ public class BufferedSetReader {
         for(ReadPair d : tempholder){
             //this.divetcounter++;
             d.setMapCount(divMaps.retMap(d.Name()));
-            if(gaps.checkGapOverlap(d)){
-                // This read pair spanned a gap! Nothing to see here...
-                continue;
+            if(this.useGapOverlap){
+                if(gaps.checkGapOverlap(d)){
+                    // This read pair spanned a gap! Nothing to see here...
+                    continue;
+                }
             }
             if(!tSet.checkAndCombinePairs(d)){
                 BufferedInitialSet temp = new BufferedInitialSet(this.buffer, "InitSet");
@@ -237,9 +237,11 @@ public class BufferedSetReader {
                     Collections.sort(temp);
                     for(pairSplit p : temp){
                         this.splitcounter++;
-                        if(gaps.checkGapOverlap(p)){
-                            // This read pair spanned a gap! Nothing to see here...
-                            continue;
+                        if(this.useGapOverlap){
+                            if(gaps.checkGapOverlap(p)){
+                                // This read pair spanned a gap! Nothing to see here...
+                                continue;
+                            }
                         }
                         ReadPair work = new ReadPair(p, file, readEnum.IsSplit);
                         work.setMapCount(this.anchorMaps.retMap(clone));
@@ -431,19 +433,14 @@ public class BufferedSetReader {
      * Private housekeeping methods
      */
     
-    private void identifyFiles(String file){
-        try(BufferedReader input = Files.newBufferedReader(Paths.get(file), Charset.forName("UTF-8"))){
-            String line;
-            while((line = input.readLine()) != null){
-                FlatFile flat = new FlatFile(line);
-                this.fileEntries.add(flat);
-            }
-        }catch(IOException ex){
-            Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
+    
     private void createGapOverlapTool(String gapFile){
+        if(gapFile.equals("NULL")){
+            System.out.println("[RAPTR-SV INPUT] Not using Gap filtration for this dataset.");
+            return;
+        }
         this.gaps = new GapOverlap(gapFile);
-        System.out.println("[RPSR INPUT] Finished loading gap file: " + gapFile);
+        System.out.println("[RAPTR-SV INPUT] Finished loading gap file: " + gapFile);
+        this.useGapOverlap = true;
     }
 }

@@ -10,6 +10,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.logging.Level;
@@ -31,10 +32,25 @@ public class OutputEvents {
         this.outfile = Paths.get(outfile);
         this.supportfile = Paths.get(outfile + ".sup");
         this.debug = debug;
+        // Adding file creation to support append statement (for use in multiple-chromosome mode)
+        if(!this.outfile.toFile().exists())
+            try {
+                this.outfile.toFile().createNewFile();
+            } catch (IOException ex) {
+                Logger.getLogger(OutputEvents.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        else{
+            this.outfile.toFile().delete();
+            try {
+                this.outfile.toFile().createNewFile();
+            } catch (IOException ex) {
+                Logger.getLogger(OutputEvents.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
     
     public void WriteOut (){
-        try (BufferedWriter output = Files.newBufferedWriter(outfile, Charset.forName("UTF-8")) ){
+        try (BufferedWriter output = Files.newBufferedWriter(outfile, Charset.forName("UTF-8"), StandardOpenOption.APPEND) ){
             Collections.sort(sets);
             for(finalSets event : this.sets){
                 String outLine = join(event.Chr(), String.valueOf(event.Start()), String.valueOf(event.InnerStart()),

@@ -7,8 +7,23 @@
 package modes;
 
 import GetCmdOpt.SimpleModeCmdLineParser;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import net.sf.samtools.SAMFileReader;
 import setWeightCover.weightCoverEvents;
 import workers.BufferedSetReader;
+import workers.FlatFile;
 import workers.OutputEvents;
 import workers.OutputInversion;
 
@@ -18,7 +33,8 @@ import workers.OutputInversion;
  */
 public class ClusterMode {
     private final String flatFile;
-    private final String chr;
+    private String chr;
+    private boolean processChr = false;
     private final String gapFile;
     private final String outBase;
     private final boolean debug;
@@ -30,8 +46,14 @@ public class ClusterMode {
     
     public ClusterMode(SimpleModeCmdLineParser values){
         flatFile = values.GetValue("flatfile");
-        chr = values.GetValue("chromosome");
-        gapFile = values.GetValue("gapfile");
+        if(values.HasOpt("chromosome")){
+            chr = values.GetValue("chromosome");
+            processChr = true;
+        }
+        if(values.HasOpt("gapfile"))
+            gapFile = values.GetValue("gapfile");
+        else
+            gapFile = "NULL";
         outBase = values.GetValue("outbase");
         if(values.HasOpt("buffer"))
             buffer = Integer.parseInt(values.GetValue("buffer"));
@@ -49,15 +71,26 @@ public class ClusterMode {
     }
     
     public void run(){
+        ArrayList<FlatFile> files = this.identifyFiles(flatFile);
+        if(this.processChr)
+            processChr(files, chr);
+        else{
+            // Determine chromosomes from split read bam file
+            Set<String> chrs = this.identifyChrs(files);
+            for(String c : chrs){
+                processChr(files, c);
+            }
+        }
+    }
+
+    private void processChr(ArrayList<FlatFile> files, String chr) {
         // Read input files and place into preliminary containers
-        //readInputFiles fileParser = new readInputFiles(cmd.flatFile, cmd.gapFile, cmd.chr);
-        BufferedSetReader reader = new BufferedSetReader(flatFile, gapFile, chr, buffer, rpPhredFilter);
+        System.out.println("[CLUSTER] Working on chromosome: " + chr + " ...");
+        BufferedSetReader reader = new BufferedSetReader(files, gapFile, chr, buffer, rpPhredFilter);
         
         // Run set weight cover to cluster sets
-        
         weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), chr, debug, threshold, threads, phredFilter);
         finalEvents.calculateInitialSetStats();
-        
         finalEvents.run();
         
         // Output results
@@ -72,6 +105,35 @@ public class ClusterMode {
         
         OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), outBase + ".rpsr.inversions");
         inversions.WriteOut();
-        System.exit(0);
+    }
+    
+    private ArrayList<FlatFile> identifyFiles(String file){
+        ArrayList<FlatFile> output = new ArrayList<>();
+        try(BufferedReader input = Files.newBufferedReader(Paths.get(file), Charset.forName("UTF-8"))){
+            String line;
+            while((line = input.readLine()) != null){
+                FlatFile flat = new FlatFile(line);
+                output.add(flat);
+            }
+        }catch(IOException ex){
+            Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return output;
+    }
+    
+    private Set<String> identifyChrs(ArrayList<FlatFile> files){
+        return files.stream()
+                .map(s -> this.getChrsFromBam(s.getSplitsam().toFile()))
+                .flatMap(List::stream)
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+    
+    private List<String> getChrsFromBam(File sam){
+        SAMFileReader samr = new SAMFileReader(sam);
+        return samr.getFileHeader()
+                .getSequenceDictionary()
+                .getSequences().stream()
+                    .map(s -> s.getSequenceName())
+                    .collect(Collectors.toList());
     }
 }

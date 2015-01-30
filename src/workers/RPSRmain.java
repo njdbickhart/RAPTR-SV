@@ -13,7 +13,7 @@ import modes.PreprocessMode;
  * @author bickhart
  */
 public class RPSRmain {
-    private static final String version = "0.0.5";
+    private static final String version = "0.0.6";
 
     /**
      * @param args the command line arguments
@@ -67,8 +67,8 @@ public class RPSRmain {
                 "RAPTR-SV cluster mode" + nl +
                 "Usage: java -jar RAPTR-SV.jar cluster [-s filelist -c chromosome -g gap file -o output prefix] (optional: -g gmsfile list, -b buffer size)" + nl
                 + "\t-s\tFlatfile containing records from the same reads" + nl
-                + "\t-c\tChromosome to be processed" + nl
-                + "\t-g\tAssembly Gap bed file" + nl
+                + "\t-c\tChromosome to be processed [optional; will process all chromosomes]" + nl
+                + "\t-g\tAssembly Gap bed file [optional; will not perform gap filtration]" + nl
                 + "\t-o\tOutput file prefix and directory" + nl
                 + "\t-m\tPair ProbBased Phred filter. All discordant read pairs below this are removed [optional floating point; default is 0.0001]" + nl
                 + "\t-f\tFloating point value for set threshold of detection [optional; default is one]" + nl
@@ -77,7 +77,7 @@ public class RPSRmain {
                 + "\t-t\tThe number of threads to devote to SetWeightCover screening [optional; default is 1]" + nl
                 + "\t-p\tAn alternate temp directory to write temporary data [optional; use if your /tmp partition is too small]" + nl,
                 "s:c:g:o:m:f:b:d|i:t:p:", 
-                "scgo", 
+                "so", 
                 "scgomfbditp", 
                 "flatfile", "chromosome", "gapfile", "outbase", "pfilter", "filter", "buffer", "debug", "thresh", "threads", "temp");
         
