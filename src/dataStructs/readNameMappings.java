@@ -32,4 +32,8 @@ public class readNameMappings {
             return 0;
         }
     }
+    
+    public int getSize(){
+        return this.readTable.size();
+    }
 }

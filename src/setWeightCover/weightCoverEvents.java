@@ -13,6 +13,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 
@@ -33,6 +35,10 @@ public class weightCoverEvents{
     private final double phredFilter;
     //private final ForkJoinPool pool;
     
+    private int del = 0, ins = 0, inv = 0, tand = 0;
+    
+    private static final Logger log = Logger.getLogger(weightCoverEvents.class.getName());
+    
     public weightCoverEvents(SetMap sets, String chr, boolean debug, int thresh, int threads, double phredFilter){
         this.inputSets = sets.getUnsortedBedList(chr);
         this.chr = chr;
@@ -46,10 +52,11 @@ public class weightCoverEvents{
         this.phredFilter = phredFilter;
         //this.pool = new ForkJoinPool(threads);
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", String.valueOf(threads));
+        log.log(Level.FINE, "[WEIGHT] System fork join pool set to: " + System.getProperty("java.util.concurrent.ForkJoinPool.common.parallelism"));
     }
     
     public void calculateInitialSetStats(){
-        System.out.println("[RPSR WEIGHT] Calculating preliminary set values.");
+        System.out.println("[RAPTR-SV WEIGHT] Calculating preliminary set values.");
         this.inputSets.stream().forEach((s) -> {
             s.preliminarySetCalcs();
         });
@@ -67,10 +74,12 @@ public class weightCoverEvents{
                 .forEach(s -> coordsorted.add(new CoordTree(s)));
         
         // Parallel implementation to try to speed up calculations
+        log.log(Level.FINE, "[WEIGHT] Calculating initial set weight values.");
         this.inputSets.parallelStream()
                 .forEach(s -> s.reCalculateValues(names));
         
         // Now I'm going to try to do some dynamic programming to identify sets that need to be recalculated
+        log.log(Level.FINE, "[WEIGHT] Identifying sets that need to be recalculated.");
         Set<String> lookout = this.inputSets.parallelStream()
                 .map((s) -> s.getReadNames())
                 .flatMap(ArrayList::stream)
@@ -87,7 +96,8 @@ public class weightCoverEvents{
         .map((s) -> s.getKey())
         .collect(Collectors.toCollection(HashSet::new));*/
         
-        System.out.println("[RPSR WEIGHT] Reads that need recalculation: " + lookout.size());
+        System.out.println("[RAPTR-SV WEIGHT] Reads that need recalculation: " + lookout.size());
+        log.log(Level.FINE, "[WEIGHT] " + chr + " Identified: " + lookout.size() + " reads that need recalculation.");
         
         // Now its time to toggle the sets to see if they need to be recalculated
         this.inputSets.parallelStream()
@@ -108,7 +118,7 @@ public class weightCoverEvents{
         int finalCount = 0, removal = 0;
         // Initial removal to ensure that our list of sets is low for subsequent collection
         removal = this.setRemoval(removal);
-        
+        log.log(Level.FINE, "[WEIGHT] " + chr + " Removed: " + removal + " initial sets prior to weight cover.");
         for(int z = 0; z < initialSize; z++){
             if(this.inputSets.isEmpty()){
                 break;
@@ -185,10 +195,12 @@ public class weightCoverEvents{
             break;
             }*/
             
-            System.out.print("[RPSR WEIGHT] Working on set number: " + removal + " of " + initialSize + " and have retained: " + z + "\r");
+            System.out.print("[RAPTR-SV WEIGHT] Working on set number: " + removal + " of " + initialSize + " and have retained: " + z + "\r");
         }
         
-        System.out.println(System.lineSeparator() + "[RPSR WEIGHT] Finished with: " + this.chr + ": " + finalCount + " out of " + initialSize + " initial Events");
+        log.log(Level.FINE, "[WEIGHT] " + chr + " Identified; del: " + del + " ins: " + ins + " tand: " + tand + " inv: " + inv);
+        log.log(Level.FINE, "[WEIGHT] " + chr + " Found " + finalCount + " events out of " + initialSize + " initial events");
+        System.out.println(System.lineSeparator() + "[RAPTR-SV WEIGHT] Finished with: " + this.chr + ": " + finalCount + " out of " + initialSize + " initial Events");
     }
 
     private int setRemoval(int removal) {
@@ -204,16 +216,20 @@ public class weightCoverEvents{
     }
     
     private void ProcessTanDup(BufferedInitialSet a){
+        tand++;
         this.tandup.add(new TandDup(a, names, debugmode));
     }
     private void ProcessDel(BufferedInitialSet a){
+        del++;
         this.deletions.add(new Deletions(a, names, debugmode));
     }
     private void ProcessIns(BufferedInitialSet a){
+        ins++;
         this.insertions.add(new Insertions(a, names, debugmode));
     }
     private void ProcessInv(BufferedInitialSet a, ArrayList<CoordTree> coords){
         // Find the starting coordinate for the inversion in the coord sorted array
+        inv++;
         int initialCoord = 0;
         Inversions temp = new Inversions(a, names, debugmode);
         for(int i = 0; i < coords.size(); i++){

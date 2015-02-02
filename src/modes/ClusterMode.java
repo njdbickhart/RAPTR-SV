@@ -7,6 +7,7 @@
 package modes;
 
 import GetCmdOpt.SimpleModeCmdLineParser;
+import StrUtils.StrArray;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -147,11 +148,14 @@ public class ClusterMode {
     
     private List<String> getChrsFromBam(File sam){
         SAMFileReader samr = new SAMFileReader(sam);
-        return samr.getFileHeader()
+        log.log(Level.FINE, "[CLUSTER] extracting chromosomes from bam header: " + sam.toString());
+        List<String> headers = samr.getFileHeader()
                 .getSequenceDictionary()
                 .getSequences().stream()
                     .map(s -> s.getSequenceName())
                     .collect(Collectors.toList());
+        log.log(Level.FINE, "[CLUSTER] using the following chromosomes for cluster automation: " + StrArray.Join((ArrayList<String>) headers, ", "));
+        return headers;
     }
     
 }

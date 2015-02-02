@@ -49,6 +49,8 @@ public class BufferedSetReader {
     private final ReadNameUtility rn = new ReadNameUtility();
     private final double pfilter;
     
+    private int unbal = 0, easBal = 0, hardUnbal = 0, hardBal = 0;
+    
     private static final Logger log = Logger.getLogger(BufferedSetReader.class.getName());
     
     public BufferedSetReader(ArrayList<FlatFile> files, String gapFile, String chr, int buffer, double pfilter){
@@ -208,6 +210,7 @@ public class BufferedSetReader {
         //}catch(IOException ex){
             //Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
         //}
+            log.log(Level.FINE, "[INPUT] " + file.getAnchor().toString() + " Currently holding " + this.anchorMaps.getSize() + " anchor read name mappings");
         return anchors;
         //System.out.println("[VHSR INPUT] Finished loading " + this.anchors.size() + " anchor keys");
     }
@@ -221,6 +224,15 @@ public class BufferedSetReader {
     }
     private SetMap<BufferedInitialSet> associateSplits(HashMap<String, ArrayList<anchorRead>> anchors, FlatFile file){        
         SetMap<BufferedInitialSet> tSet = new SetMap<BufferedInitialSet>();
+        
+        // Set diagnostic counter variables
+        int splitCnt = 0;
+        int gapRmv = 0;
+        this.unbal = 0;
+        this.easBal = 0;
+        this.hardBal = 0;
+        this.hardUnbal = 0;
+        
         try(SAMFileReader samReader = new SAMFileReader(file.getSplitsam().toFile())){
             SAMRecordIterator iterator = samReader.iterator();
             while(iterator.hasNext()){
@@ -248,9 +260,11 @@ public class BufferedSetReader {
                     // Sorting so that balanced splits appear first
                     Collections.sort(temp);
                     for(pairSplit p : temp){
-                        this.splitcounter++;
+                        //this.splitcounter++;
+                        splitCnt++;
                         if(this.useGapOverlap){
                             if(gaps.checkGapOverlap(p)){
+                                gapRmv++;
                                 // This read pair spanned a gap! Nothing to see here...
                                 continue;
                             }
@@ -274,6 +288,8 @@ public class BufferedSetReader {
             Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
         }
         
+        log.log(Level.FINE, "[INPUT] " + file.getSplitsam().toString() + " Split read statistics; unbal: " + this.unbal + " bal: " + this.easBal + " hardUnbal: " + this.hardUnbal + " hardBal: " + this.hardBal );
+        log.log(Level.FINE, "[INPUT] " + file.getSplitsam().toString() + " Identified " + splitCnt + " split mappings and removed " + gapRmv + " due to gap filtration.");
         //System.out.println("[VHSR INPUT] Finished loading " + this.splits.size() + " paired splits");
         return tSet;
     }
@@ -337,12 +353,14 @@ public class BufferedSetReader {
         ArrayList<splitRead> sArray = this.soleSplits.get(clone);
         ArrayList<pairSplit> splits = new ArrayList<>();
         
+        
+        
         if(sArray.size() == 1){
             for(anchorRead anchor : aArray){
                 // Easy unbalanced split pairing
                 // Just make sure that it isnt too long!
                 if(anchorConsistency(anchor.chr, sArray.get(0).Chr(), anchor.start, sArray.get(0).Start())){
-                    
+                    unbal++;
                     splits.add(new pairSplit(anchor, sArray.get(0), clone));
                 }
             }
@@ -359,11 +377,12 @@ public class BufferedSetReader {
                 if(anchorConsistency(anchor.chr, sArray.get(0).Chr(), anchor.start, sArray.get(0).Start())
                         && subtractClosest(sArray.get(0).Start(), sArray.get(0).End(), 
                                 sArray.get(1).Start(), sArray.get(1).End()) > 5){
+                    easBal++;
                     splits.add(new pairSplit(anchor, sArray.get(0), sArray.get(1), clone));
-                    if(sArray.get(0).Start() <= 20707037 && sArray.get(0).Start() >= 20706839
-                            && sArray.get(1).Start() <= 21002974 && sArray.get(1).End() >= 21002776){
-                        System.out.println("Deletion split pair: " + sArray.get(0).toString() + ";" + sArray.get(1).toString());
-                    }
+                    /*if(sArray.get(0).Start() <= 20707037 && sArray.get(0).Start() >= 20706839
+                    && sArray.get(1).Start() <= 21002974 && sArray.get(1).End() >= 21002776){
+                    System.out.println("Deletion split pair: " + sArray.get(0).toString() + ";" + sArray.get(1).toString());
+                    }*/
                 }
             }
         }
@@ -391,6 +410,7 @@ public class BufferedSetReader {
                 ArrayList<splitRead> temp = splitSeg.get(splitNums.iterator().next());
                 for(anchorRead anchor : aArray){
                     for(splitRead stemp : temp){
+                        hardUnbal++;
                         splits.add(new pairSplit(anchor, stemp, clone));
                     }                    
                 }
@@ -406,16 +426,18 @@ public class BufferedSetReader {
                                     && subtractClosest(fs.Start(), fs.End(), 
                                         rs.Start(), rs.End()) > 5){
                                 splits.add(new pairSplit(anchor, fs, rs, clone));
-                                if(sArray.get(0).Start() <= 20707037 && sArray.get(0).Start() >= 20706839
-                                    && sArray.get(1).Start() <= 21002974 && sArray.get(1).End() >= 21002776){
-                                    System.out.println("Deletion split pair: " + sArray.get(0).toString() + ";" + sArray.get(1).toString());
-                                }
+                                hardBal++;
+                                /*if(sArray.get(0).Start() <= 20707037 && sArray.get(0).Start() >= 20706839
+                                && sArray.get(1).Start() <= 21002974 && sArray.get(1).End() >= 21002776){
+                                System.out.println("Deletion split pair: " + sArray.get(0).toString() + ";" + sArray.get(1).toString());
+                                }*/
                             }
                         }
                     }
                 }
             }
         }
+        
         return splits;
     }
     
@@ -448,9 +470,11 @@ public class BufferedSetReader {
     
     private void createGapOverlapTool(String gapFile){
         if(gapFile.equals("NULL")){
+            log.log(Level.FINE, "[INPUT] Not running gap file filtration.");
             System.out.println("[RAPTR-SV INPUT] Not using Gap filtration for this dataset.");
             return;
         }
+        log.log(Level.FINE, "[INPUT] Using gap filtration. Input file is: " + gapFile);
         this.gaps = new GapOverlap(gapFile);
         System.out.println("[RAPTR-SV INPUT] Finished loading gap file: " + gapFile);
         this.useGapOverlap = true;
