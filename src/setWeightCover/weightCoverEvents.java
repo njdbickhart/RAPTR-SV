@@ -37,7 +37,7 @@ public class weightCoverEvents{
     
     private int del = 0, ins = 0, inv = 0, tand = 0;
     
-    private static final Logger log = Logger.getLogger("");
+    private static final Logger log = Logger.getLogger(weightCoverEvents.class.getName());
     
     public weightCoverEvents(SetMap sets, String chr, boolean debug, int thresh, int threads, double phredFilter){
         this.inputSets = sets.getUnsortedBedList(chr);

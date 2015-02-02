@@ -72,6 +72,7 @@ public class RPSRmain {
             handler = new FileHandler("RAPTR-SV." + type + ".%u.%g.log");
             handler.setFormatter(new LogFormat());
             console = new ConsoleHandler();
+            
             if(debug){
                 handler.setLevel(Level.ALL);
                 console.setLevel(Level.INFO);

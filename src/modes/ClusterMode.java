@@ -45,7 +45,7 @@ public class ClusterMode {
     private int threads = 1;
     private double rpPhredFilter = 0.0001d;
     
-    private static final Logger log = Logger.getLogger("");
+    private static final Logger log = Logger.getLogger(ClusterMode.class.getName());
     
     public ClusterMode(SimpleModeCmdLineParser values){
         flatFile = values.GetValue("flatfile");
