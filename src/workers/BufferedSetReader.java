@@ -72,7 +72,7 @@ public class BufferedSetReader {
                 .sequential()
                 .reduce(new SetMap<>(), (a, b) -> {
                    a.checkAndCombineMaps(b, chr);
-                   log.log(Level.INFO, "[BUFFSET] Divet reduction produced number of sets: " + a.getUnsortedBedList(chr));
+                   log.log(Level.INFO, "[BUFFSET] Divet reduction produced number of sets: " + a.getUnsortedBedList(chr).size());
                    return a;
                 });
                 
@@ -90,7 +90,7 @@ public class BufferedSetReader {
                 .sequential()
                 .reduce(dSet, (a, b) -> {
                     a.checkAndCombineMaps(b, chr);
-                    log.log(Level.INFO, "[BUFFSET] Split reduction produced number of sets: " + a.getUnsortedBedList(chr));
+                    log.log(Level.INFO, "[BUFFSET] Split reduction produced number of sets: " + a.getUnsortedBedList(chr).size());
                     return a;
                 });
         
