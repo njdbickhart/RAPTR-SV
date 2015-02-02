@@ -27,8 +27,8 @@ public class OutputEvents {
     protected Path supportfile;
     protected final boolean debug;
     
-    public OutputEvents(ArrayList<? extends finalSets> sets, String outfile, boolean debug){
-        this.sets = (ArrayList<finalSets>) sets;
+    public OutputEvents(String outfile, boolean debug){
+        //this.sets = (ArrayList<finalSets>) sets;
         this.outfile = Paths.get(outfile);
         this.supportfile = Paths.get(outfile + ".sup");
         this.debug = debug;
@@ -49,7 +49,18 @@ public class OutputEvents {
         }
     }
     
+    public void AddSets(ArrayList<? extends finalSets> sets ){
+        this.sets = (ArrayList<finalSets>) sets;
+    }
+    
+    public void PurgeSets(){
+        this.sets = null;
+    }
+    
     public void WriteOut (){
+        if(this.sets == null){
+            return;
+        }
         try (BufferedWriter output = Files.newBufferedWriter(outfile, Charset.forName("UTF-8"), StandardOpenOption.APPEND) ){
             Collections.sort(sets);
             for(finalSets event : this.sets){

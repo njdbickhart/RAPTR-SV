@@ -21,6 +21,7 @@ public class LogFormat extends Formatter{
         StringBuilder buff = new StringBuilder();
         buff.append(this.calcDate(lr.getMillis())).append(" -- ");
         buff.append(lr.getLevel()).append(" -- ");
+        buff.append(lr.getSourceClassName()).append(" -> ").append(lr.getSourceMethodName()).append(" -- ");
         buff.append(formatMessage(lr)).append(System.lineSeparator());
         return buff.toString();
     }

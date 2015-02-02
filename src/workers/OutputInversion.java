@@ -24,12 +24,23 @@ public class OutputInversion {
     protected ArrayList<Inversions> sets;
     protected Path outfile;
     
-    public OutputInversion(ArrayList<Inversions> sets, String outfile){
-        this.sets = sets;
+    public OutputInversion(String outfile){
+        //this.sets = sets;
         this.outfile = Paths.get(outfile);
     }
     
+    public void AddSets(ArrayList<Inversions> sets ){
+        this.sets = sets;
+    }
+    
+    public void PurgeSets(){
+        this.sets = null;
+    }
+    
     public void WriteOut (){
+        if(this.sets == null){
+            return;
+        }
         try (BufferedWriter output = Files.newBufferedWriter(outfile, Charset.forName("UTF-8")) ){
             for(Inversions event : this.sets){
                 if(!event.IsComplete()){

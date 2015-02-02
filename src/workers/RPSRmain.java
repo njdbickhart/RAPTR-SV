@@ -92,6 +92,7 @@ public class RPSRmain {
         // Log input arguments
         log.log(Level.INFO, "[MAIN] Command line arguments supplied: ");
         log.log(Level.INFO, StrUtils.StrArray.Join(args, " "));
+        log.log(Level.INFO, "[MAIN] Debug flag set to: " + debug);
     }
     
     private static SimpleModeCmdLineParser PrepareCMDOptions(){

@@ -51,7 +51,7 @@ public class BufferedSetReader {
     
     private int unbal = 0, easBal = 0, hardUnbal = 0, hardBal = 0;
     
-    private static final Logger log = Logger.getLogger(BufferedSetReader.class.getName());
+    private static final Logger log = Logger.getLogger("");
     
     public BufferedSetReader(ArrayList<FlatFile> files, String gapFile, String chr, int buffer, double pfilter){
         // First, let's load the data file locations and create the gap intersection

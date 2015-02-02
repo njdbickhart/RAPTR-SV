@@ -45,7 +45,7 @@ public class ClusterMode {
     private int threads = 1;
     private double rpPhredFilter = 0.0001d;
     
-    private static final Logger log = Logger.getLogger(ClusterMode.class.getName());
+    private static final Logger log = Logger.getLogger("");
     
     public ClusterMode(SimpleModeCmdLineParser values){
         flatFile = values.GetValue("flatfile");
@@ -80,20 +80,27 @@ public class ClusterMode {
     public void run(){
         ArrayList<FlatFile> files = this.identifyFiles(flatFile);
         log.log(Level.INFO, "[CLUSTER] identified: " + files.size() + " flatfile lines");
+        
+        // Create output file holders
+        OutputEvents insertions = createOutputEvents(outBase + ".raptr.insertions", debug);
+        OutputEvents deletions = createOutputEvents(outBase + ".raptr.ideletions", debug);
+        OutputEvents tanddup = createOutputEvents(outBase + ".raptr.tand", debug);
+        OutputInversion inversions = new OutputInversion(outBase + ".raptr.inversions");
+        
         if(this.processChr){
             log.log(Level.FINE, "[CLUSTER] processing chromosome.");
-            processChr(files, chr);
+            processChr(files, chr, insertions, deletions, tanddup, inversions);
         }else{
             // Determine chromosomes from split read bam file
             Set<String> chrs = this.identifyChrs(files);
             for(String c : chrs){
                 log.log(Level.FINE, "[CLUSTER] processing multiple chromosomes. Now chromosome: " + c);
-                processChr(files, c);
+                processChr(files, c, insertions, deletions, tanddup, inversions);
             }
         }
     }
 
-    private void processChr(ArrayList<FlatFile> files, String chr) {
+    private void processChr(ArrayList<FlatFile> files, String chr, OutputEvents insertions, OutputEvents deletions, OutputEvents tanddup, OutputInversion inversions) {
         // Read input files and place into preliminary containers
         System.out.println("[CLUSTER] Working on chromosome: " + chr + " ...");
         BufferedSetReader reader = new BufferedSetReader(files, gapFile, chr, buffer, rpPhredFilter);
@@ -108,19 +115,27 @@ public class ClusterMode {
         log.log(Level.FINE, "[CLUSTER] exited weightCoverEvents.run for chr: " + chr);
         
         // Output results
-        OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), outBase + ".rpsr.insertions", debug);
+        //OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), outBase + ".rpsr.insertions", debug);
+        insertions.AddSets(finalEvents.RetIns());
         insertions.WriteOut();
         
-        OutputEvents deletions = new OutputEvents(finalEvents.RetDel(), outBase + ".rpsr.deletions", debug);
+        //OutputEvents deletions = new OutputEvents(finalEvents.RetDel(), outBase + ".rpsr.deletions", debug);
+        deletions.AddSets(finalEvents.RetDel());
         deletions.WriteOut();
         
-        OutputEvents tanddup = new OutputEvents(finalEvents.RetTand(), outBase + ".rpsr.tand", debug);
+        //OutputEvents tanddup = new OutputEvents(finalEvents.RetTand(), outBase + ".rpsr.tand", debug);
+        tanddup.AddSets(finalEvents.RetTand());
         tanddup.WriteOut();
         
-        OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), outBase + ".rpsr.inversions");
+        //OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), outBase + ".rpsr.inversions");
+        inversions.AddSets(finalEvents.RetInv());
         inversions.WriteOut();
         
         log.log(Level.FINE, "[CLUSTER] wrote output to event files for chr: " + chr);
+    }
+    
+    private OutputEvents createOutputEvents(String outbaseExt, boolean debug){
+        return new OutputEvents(outbaseExt, debug);
     }
     
     private ArrayList<FlatFile> identifyFiles(String file){
