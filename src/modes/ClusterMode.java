@@ -83,7 +83,7 @@ public class ClusterMode {
         
         // Create output file holders
         OutputEvents insertions = createOutputEvents(outBase + ".raptr.insertions", debug);
-        OutputEvents deletions = createOutputEvents(outBase + ".raptr.ideletions", debug);
+        OutputEvents deletions = createOutputEvents(outBase + ".raptr.deletions", debug);
         OutputEvents tanddup = createOutputEvents(outBase + ".raptr.tand", debug);
         OutputInversion inversions = new OutputInversion(outBase + ".raptr.inversions");
         
