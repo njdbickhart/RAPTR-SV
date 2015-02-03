@@ -84,6 +84,8 @@ public class RPSRmain {
             Logger.getLogger(RPSRmain.class.getName()).log(Level.SEVERE, null, ex);
         }
         Logger mainLog = Logger.getLogger("");
+        // This will display all messages, but the handlers should filter the rest
+        mainLog.setLevel(Level.ALL);
         for(Handler h : mainLog.getHandlers()){
             mainLog.removeHandler(h);
         }
