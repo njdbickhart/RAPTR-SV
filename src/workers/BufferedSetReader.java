@@ -156,8 +156,8 @@ public class BufferedSetReader {
                     divMaps.addRead(segs[0].trim());
                     if(!segs[13].equals("1") && 
                             Double.valueOf(segs[12]) > pfilter &&
-                            segs[9].equals("transchr") &&
-                            segs[9].equals("inversion")){
+                            !segs[9].equals("transchr") &&
+                            !segs[9].equals("inversion")){
                         ReadPair rp = new ReadPair(line, file, readEnum.IsDisc);
                         tempholder.add(rp);
                     }
