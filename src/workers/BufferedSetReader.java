@@ -164,6 +164,7 @@ public class BufferedSetReader {
         }
         
         int gapCount = 0;
+        int curSetCount = 0;
         for(ReadPair d : tempholder){
             //this.divetcounter++;
             d.setMapCount(divMaps.retMap(d.Name()));
@@ -178,6 +179,10 @@ public class BufferedSetReader {
                 BufferedInitialSet temp = new BufferedInitialSet(this.buffer, "InitSet");
                 temp.bufferedAdd(d);
                 tSet.addBedData(temp);
+                curSetCount++;
+                if(curSetCount % 1000 == 0){
+                    log.log(Level.FINE, "[BUFFSET] Added divet set number: " + curSetCount + " out of total sets: " + tempholder.size());
+                }
             }
         }
         //System.out.println("[VHSR INPUT] Finished loading " + this.divets.size() + " discordant read pairs");
@@ -250,6 +255,7 @@ public class BufferedSetReader {
                 );
                 appendSplitToConstruct(sR, rn.GetCloneName(sR.Name(), line.getFlags()));                    
             }
+            
             for(String clone : anchors.keySet()){
                 if(this.soleSplits.containsKey(clone)){
                     ArrayList<pairSplit> temp = pairSplits(anchors.get(clone), clone);
@@ -279,6 +285,9 @@ public class BufferedSetReader {
                             BufferedInitialSet set = new BufferedInitialSet(this.buffer, "InitSet");
                             set.addReadPair(work);
                             tSet.addBedData(set);
+                            if(splitCnt % 10000 == 0){
+                                log.log(Level.FINE, "[BUFFSET] Added split set number: " + splitCnt );
+                            }
                         }
                     }
                 }
@@ -470,11 +479,11 @@ public class BufferedSetReader {
     
     private void createGapOverlapTool(String gapFile){
         if(gapFile.equals("NULL")){
-            log.log(Level.FINE, "[INPUT] Not running gap file filtration.");
+            log.log(Level.INFO, "[INPUT] Not running gap file filtration.");
             System.out.println("[RAPTR-SV INPUT] Not using Gap filtration for this dataset.");
             return;
         }
-        log.log(Level.FINE, "[INPUT] Using gap filtration. Input file is: " + gapFile);
+        log.log(Level.INFO, "[INPUT] Using gap filtration. Input file is: " + gapFile);
         this.gaps = new GapOverlap(gapFile);
         System.out.println("[RAPTR-SV INPUT] Finished loading gap file: " + gapFile);
         this.useGapOverlap = true;
