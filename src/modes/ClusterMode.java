@@ -85,22 +85,22 @@ public class ClusterMode {
         OutputEvents insertions = createOutputEvents(outBase + ".raptr.insertions", debug);
         OutputEvents deletions = createOutputEvents(outBase + ".raptr.deletions", debug);
         OutputEvents tanddup = createOutputEvents(outBase + ".raptr.tand", debug);
-        OutputInversion inversions = new OutputInversion(outBase + ".raptr.inversions");
+        //OutputInversion inversions = new OutputInversion(outBase + ".raptr.inversions");
         
         if(this.processChr){
             log.log(Level.FINE, "[CLUSTER] processing chromosome.");
-            processChr(files, chr, insertions, deletions, tanddup, inversions);
+            processChr(files, chr, insertions, deletions, tanddup);
         }else{
             // Determine chromosomes from split read bam file
             Set<String> chrs = this.identifyChrs(files);
             for(String c : chrs){
                 log.log(Level.FINE, "[CLUSTER] processing multiple chromosomes. Now chromosome: " + c);
-                processChr(files, c, insertions, deletions, tanddup, inversions);
+                processChr(files, c, insertions, deletions, tanddup);
             }
         }
     }
 
-    private void processChr(ArrayList<FlatFile> files, String chr, OutputEvents insertions, OutputEvents deletions, OutputEvents tanddup, OutputInversion inversions) {
+    private void processChr(ArrayList<FlatFile> files, String chr, OutputEvents insertions, OutputEvents deletions, OutputEvents tanddup) {
         // Read input files and place into preliminary containers
         System.out.println("[CLUSTER] Working on chromosome: " + chr + " ...");
         BufferedSetReader reader = new BufferedSetReader(files, gapFile, chr, buffer, rpPhredFilter);
@@ -128,8 +128,8 @@ public class ClusterMode {
         tanddup.WriteOut();
         
         //OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), outBase + ".rpsr.inversions");
-        inversions.AddSets(finalEvents.RetInv());
-        inversions.WriteOut();
+        //inversions.AddSets(finalEvents.RetInv());
+        //inversions.WriteOut();
         
         log.log(Level.FINE, "[CLUSTER] wrote output to event files for chr: " + chr);
     }

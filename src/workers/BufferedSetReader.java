@@ -150,14 +150,19 @@ public class BufferedSetReader {
                 if(segs.length < 13)
                     continue;
                 
-                if(!(segs[1].equals(this.chr))){
-                    continue;
+                // ignoring inversions and transchr events
+                // Will return to them in a different module with different logic
+                if((segs[1].equals(this.chr))){
+                    divMaps.addRead(segs[0].trim());
+                    if(!segs[13].equals("1") && 
+                            Double.valueOf(segs[12]) > pfilter &&
+                            segs[9].equals("transchr") &&
+                            segs[9].equals("inversion")){
+                        ReadPair rp = new ReadPair(line, file, readEnum.IsDisc);
+                        tempholder.add(rp);
+                    }
                 }
-                divMaps.addRead(segs[0].trim());
-                if(!segs[13].equals("1") && Double.valueOf(segs[12]) > pfilter){
-                    ReadPair rp = new ReadPair(line, file, readEnum.IsDisc);
-                    tempholder.add(rp);
-                }
+                
             }
         }catch(IOException ex){
             Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
@@ -180,7 +185,7 @@ public class BufferedSetReader {
                 temp.bufferedAdd(d);
                 tSet.addBedData(temp);
                 curSetCount++;
-                if(curSetCount % 1000 == 0){
+                if(curSetCount % 100000 == 0){
                     log.log(Level.FINE, "[BUFFSET] Added divet set number: " + curSetCount + " out of total sets: " + tempholder.size());
                 }
             }
@@ -285,7 +290,7 @@ public class BufferedSetReader {
                             BufferedInitialSet set = new BufferedInitialSet(this.buffer, "InitSet");
                             set.addReadPair(work);
                             tSet.addBedData(set);
-                            if(splitCnt % 10000 == 0){
+                            if(splitCnt % 100000 == 0){
                                 log.log(Level.FINE, "[BUFFSET] Added split set number: " + splitCnt );
                             }
                         }

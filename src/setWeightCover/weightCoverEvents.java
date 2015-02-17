@@ -69,9 +69,9 @@ public class weightCoverEvents{
         // Only needed for inversions
         // Going to be greedy here and use INSINV and DELINV for Inversion finding, but will treat them
         // as deletions or insertions if they have high support in the main routine
-        this.inputSets.stream()
-                .filter(s -> s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV)
-                .forEach(s -> coordsorted.add(new CoordTree(s)));
+        //this.inputSets.stream()
+                //.filter(s -> s.svType == callEnum.INVERSION || s.svType == callEnum.INSINV || s.svType == callEnum.DELINV)
+                //.forEach(s -> coordsorted.add(new CoordTree(s)));
         
         // Parallel implementation to try to speed up calculations
         log.log(Level.FINE, "[WEIGHT] Calculating initial set weight values.");
@@ -150,8 +150,8 @@ public class weightCoverEvents{
                 case INSERTION:
                 case INSINV:
                     ProcessIns(working); break;
-                case INVERSION:
-                    ProcessInv(working, coordsorted); break;
+                //case INVERSION:
+                    //ProcessInv(working, coordsorted); break;
                 case EVERSION:
                     ProcessTanDup(working); break;
                 default:
@@ -273,9 +273,9 @@ public class weightCoverEvents{
         }
     }
     
-    public ArrayList<Inversions> RetInv(){
-        return this.inversions;
-    }
+    //public ArrayList<Inversions> RetInv(){
+        //return this.inversions;
+    //}
     public ArrayList<Deletions> RetDel(){
         return this.deletions;
     }
