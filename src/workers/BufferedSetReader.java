@@ -167,7 +167,7 @@ public class BufferedSetReader {
         }catch(IOException ex){
             Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+        log.log(Level.FINE, "[BUFFSET] Finished loading divets into memory.");
         int gapCount = 0;
         int curSetCount = 0;
         for(ReadPair d : tempholder){
@@ -260,7 +260,7 @@ public class BufferedSetReader {
                 );
                 appendSplitToConstruct(sR, rn.GetCloneName(sR.Name(), line.getFlags()));                    
             }
-            
+            log.log(Level.FINE, "[BUFFSET] Finished loading splits into memory.");
             for(String clone : anchors.keySet()){
                 if(this.soleSplits.containsKey(clone)){
                     ArrayList<pairSplit> temp = pairSplits(anchors.get(clone), clone);
