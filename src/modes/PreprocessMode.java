@@ -34,8 +34,8 @@ import workers.MrsFastRuntimeFactory;
 public class PreprocessMode {
     private boolean checkRG = false;
     private final String outbase;
-    private int samplimit = 1000;
-    private int maxdist = 100000;
+    private int samplimit = 10000;
+    private int maxdist = 1000000;
     private final String input;
     private int threads = 1;
     private final String reference;

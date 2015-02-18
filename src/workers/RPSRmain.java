@@ -20,7 +20,7 @@ import stats.LogFormat;
  * @author bickhart
  */
 public class RPSRmain {
-    private static final String version = "0.0.6";
+    private static final String version = "0.0.7";
     private static final Logger log = Logger.getLogger(RPSRmain.class.getName());
     /**
      * @param args the command line arguments
@@ -136,8 +136,8 @@ public class RPSRmain {
                 + "\t-r\tA MrsFAST indexed reference genome fasta file for realignment" + nl
                 + "\t-g\tFlag: states if the BAM has read groups [optional; default is 'false']" + nl
                 + "\t-t\tNumber of threads to use for preprocessing [optional; default is one thread]" + nl
-                + "\t-m\tMaximum distance between readpairs on the same chromosome [optional; default is 100000]" + nl
-                + "\t-s\tMetadata sampling limit. Reducing this will reduce memory overhead. [optional; default is 1000]" + nl
+                + "\t-m\tMaximum distance between readpairs on the same chromosome [optional; default is 1000000]" + nl
+                + "\t-s\tMetadata sampling limit. Reducing this will reduce memory overhead. [optional; default is 10000]" + nl
                 + "\t-p\tAn alternate temp directory to write temporary data [optional; use if your /tmp partition is too small]" + nl,
                 "i:o:r:g|t:m:s:d|p:", 
                 "ior", 
