@@ -45,18 +45,18 @@ In order to view the command line options for this mode of the program, just ent
 
 Here is a brief listing of the command line options for the "preprocess" mode:
 
-> -i <file name> (REQUIRED) An input BAM file. The BAM must be sorted by basepair coordinates. If the BAM is not indexed, RAPTR-SV will index the BAM before processing it
+> -i [file name] (REQUIRED) An input BAM file. The BAM must be sorted by basepair coordinates. If the BAM is not indexed, RAPTR-SV will index the BAM before processing it
 
-> -o <file path> (REQUIRED) The path and base name for all of the "preprocess" output files. This is the prefix text that will be appended to all of the output files. This can include the output directory (NOTE: this directory must exist ahead of time!)
+> -o [file path] (REQUIRED) The path and base name for all of the "preprocess" output files. This is the prefix text that will be appended to all of the output files. This can include the output directory (NOTE: this directory must exist ahead of time!)
 
-> -r <file name> (REQUIRED) A MrsFAST indexed reference genome file. Please make sure that the chromosome names of this reference file match the chromosome names in your BAM header! Also, repeatmasking of this reference may increase speed of processing.
+> -r [file name] (REQUIRED) A MrsFAST indexed reference genome file. Please make sure that the chromosome names of this reference file match the chromosome names in your BAM header! Also, repeatmasking of this reference may increase speed of processing.
 
 
-> -g <nothing> (OPTIONAL) Ignore the read groups in the BAM. This may result in faster performance if your bam has multiple read groups that are all derived from the same DNA library.
+> -g [nothing] (OPTIONAL) Ignore the read groups in the BAM. This may result in faster performance if your bam has multiple read groups that are all derived from the same DNA library.
 
-> -m <integer> (OPTIONAL) Maximum distance threshold for discordant read pairs [default: 1,000,000 bp]. Any read pair that has an insert length above this threshold will be ignored by the program. This helps reduce false positives, but may cause you to ignore true, large events.
+> -m [integer] (OPTIONAL) Maximum distance threshold for discordant read pairs [default: 1,000,000 bp]. Any read pair that has an insert length above this threshold will be ignored by the program. This helps reduce false positives, but may cause you to ignore true, large events.
 
-> -s <integer> (OPTIONAL) Metadata sampling limit [default: 10,000 read pairs]. This is the number of read pairs sampled by the "preprocess" mode to determine the average insert size and insert standard deviation. This value is also used to calculate how many read pairs are stored in memory while determining read pair discordancy, so reducing this value will reduce memory overhead.
+> -s [integer] (OPTIONAL) Metadata sampling limit [default: 10,000 read pairs]. This is the number of read pairs sampled by the "preprocess" mode to determine the average insert size and insert standard deviation. This value is also used to calculate how many read pairs are stored in memory while determining read pair discordancy, so reducing this value will reduce memory overhead.
 
 RAPTR-SV will generate four files for each read group of the bam that you "preprocess" (unless specified by using the '-g' option, which ignores all readgroups). Here are the files and a brief description of each:
   1. A discordant read pair map file (*.divet)
@@ -75,22 +75,22 @@ In order to view the command line options for this mode of the program, just ent
 
 Here is a brief listing of the command line options for the "cluster" mode:
 
-> -s <file name> (REQUIRED) A flat file generated from the RAPTR-SV "preprocess" mode. You can concatenate the contents of multiple flat files together for each run of RATPR-SV "cluster", but it is assumed that the flat files must point to the same individual sample.
+> -s [file name] (REQUIRED) A flat file generated from the RAPTR-SV "preprocess" mode. You can concatenate the contents of multiple flat files together for each run of RATPR-SV "cluster", but it is assumed that the flat files must point to the same individual sample.
 
-> -o <file path> (REQUIRED) The path and base name for all of the "cluster" output files. This is the prefix text that will be appended to all of the output files. This can include the output directory (NOTE: this directory must exist ahead of time!)
+> -o [file path] (REQUIRED) The path and base name for all of the "cluster" output files. This is the prefix text that will be appended to all of the output files. This can include the output directory (NOTE: this directory must exist ahead of time!)
 
 
-> -c <string>    (OPTIONAL) Process only this chromosome. This option allows you to focus on only one chromosome at a time in the program which may be useful for parallelizing RAPTR-SV clustering. Default behavior is to process every chromosome present in the split read BAM file generated by the "preprocess" step.
+> -c [string]    (OPTIONAL) Process only this chromosome. This option allows you to focus on only one chromosome at a time in the program which may be useful for parallelizing RAPTR-SV clustering. Default behavior is to process every chromosome present in the split read BAM file generated by the "preprocess" step.
 
-> -g <file name> (OPTIONAL) Assembly gap file. This file contains a list of assembly gaps in "BED" file format (please see: http://genome.ucsc.edu/FAQ/FAQformat.html#format1 ) that will be ignored by the "cluster" algorithm. This is not required, but is highly recommended to reduce false positive calls.
+> -g [file name] (OPTIONAL) Assembly gap file. This file contains a list of assembly gaps in "BED" file format (please see: http://genome.ucsc.edu/FAQ/FAQformat.html#format1 ) that will be ignored by the "cluster" algorithm. This is not required, but is highly recommended to reduce false positive calls.
 
-> -m <float>     (OPTIONAL) Set the mapping quality filter for discordant read pairs [default: 0.0001]. This will eliminate ambiguous mappings from the "divet" file prior to clustering. Very useful for highly repetitive genomes/scaffolds. 
+> -m [float]     (OPTIONAL) Set the mapping quality filter for discordant read pairs [default: 0.0001]. This will eliminate ambiguous mappings from the "divet" file prior to clustering. Very useful for highly repetitive genomes/scaffolds. 
 
-> -f <float>     (OPTIONAL) Set the set weight threshold for SV calls [default: 1.00]. This filter can be raised or lowered to increase or decrease the sensitivity of the caller, respectively. Higher values improve performance of the program but may miss some variants that have lower depth of coverage. (Will be streamlined in future versions of the algorithm)
+> -f [float]     (OPTIONAL) Set the set weight threshold for SV calls [default: 1.00]. This filter can be raised or lowered to increase or decrease the sensitivity of the caller, respectively. Higher values improve performance of the program but may miss some variants that have lower depth of coverage. (Will be streamlined in future versions of the algorithm)
 
-> -i <integer>   (OPTIONAL) Set the raw read count threshold for SV calls [default: 2]. Increasing this value can improve the performance and specificity of the program. Still, higher values may miss SVs within areas of low sequence coverage.
+> -i [integer]   (OPTIONAL) Set the raw read count threshold for SV calls [default: 2]. Increasing this value can improve the performance and specificity of the program. Still, higher values may miss SVs within areas of low sequence coverage.
 
-> -b <integer>   (OPTIONAL) The number of sets to hold in memory at one time [default: 10]. In order to reduce the memory overhead (but increase the runtime of the program) you can lower this value. WARNING: this value must be greater than zero!
+> -b [integer]   (OPTIONAL) The number of sets to hold in memory at one time [default: 10]. In order to reduce the memory overhead (but increase the runtime of the program) you can lower this value. WARNING: this value must be greater than zero!
 
 Insertion, deletion and tandem duplication output files will be generated by the cluster mode and will display information in a tab delimited file with the following columns:
   1. chromosome
