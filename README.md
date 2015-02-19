@@ -6,6 +6,8 @@ RAPTR-SV stands for "**R** e **A** d **P** air spli **T** - **R** ead **S** truc
 ### Getting Started
 First, please download the latest JDK for Java version 1.8 (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
 
+In order to generate preliminary data using the "preprocess" mode, you will also need to download and install a version of MrsFAST (http://mrsfast.sourceforge.net/Home ). The MrsFAST executable must be installed into your $PATH in order to run the program.
+
 Then, click on the "release" link at the top of this repository page, or navigate to: https://github.com/njdbickhart/RAPTR-SV/releases
 
 You can download the latest RAPTR-SV jar files from that link. In order to run RAPTR-SV, you will have to invoke it with the java 1.8 executable. Here is an example of how to run the program:
