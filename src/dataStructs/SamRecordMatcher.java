@@ -334,14 +334,14 @@ public class SamRecordMatcher extends TempDataClass {
                 .map((s) -> s.getLength()).reduce(0, Integer::sum);
     }
     
-    // TODO: instead of ignoring secondary aligments (0x256) try to generate split alignments from them
+    // TODO: instead of ignoring secondary aligments (0x100) try to generate split alignments from them
     private boolean isSplit(String[] segs){
         int fflags = Integer.parseInt(segs[3]);
         Cigar c = TextCigarCodec.getSingleton().decode(segs[7]);
-        return (((fflags & 0x4) == 0x4 
-                && (fflags & 0x8) != 0x8 
-                && (fflags & 0x256) != 0x256) 
-                || (isOverSoftClipThreshold(c, segs[11].length()) && (fflags & 0x256) != 0x256));
+        return (
+                ((fflags & 0x4) == 0x4 && (fflags & 0x8) != 0x8 && (fflags & 0x100) != 0x100) 
+                || (isOverSoftClipThreshold(c, segs[11].length()) && (fflags & 0x100) != 0x100)
+                );
     }
     
     private boolean isAnchor(String[] segs){
