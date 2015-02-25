@@ -79,6 +79,8 @@ public class SamRecordMatcher extends TempDataClass {
         if(((rgflags & 0x4) == 0x4 && (rgflags & 0x8) == 0x8))
             return; // read pair did not map at all
        
+        if((rgflags & 0x100) == 0x100)
+            return; // this read was a secondary alignment. I'm ignoring these for now
         
         SAMReadGroupRecord r;
         if(this.checkRGs)

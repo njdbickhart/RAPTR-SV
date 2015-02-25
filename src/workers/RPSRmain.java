@@ -31,26 +31,31 @@ public class RPSRmain {
         // Prepare and read command line options
         SimpleModeCmdLineParser cmd = PrepareCMDOptions();        
         cmd.GetAndCheckMode(args);
+        log.log(Level.INFO, "[MAIN] RAPTR-SV version: " + version);
         
         if(cmd.HasOpt("p")){
             System.setProperty("java.io.tmpdir", cmd.GetValue("p"));
             System.out.println("[MAIN] Setting temporary file directory to: " + cmd.GetValue("p"));
+            log.log(Level.INFO, "[MAIN] Setting temporary file directory to: " + cmd.GetValue("p"));
         }
         
         if(cmd.HasOpt("t")){
             System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", cmd.GetValue("t"));
             System.out.println("[MAIN] Setting ForkJoin thread ceiling to: " + cmd.GetValue("t"));
+            log.log(Level.INFO, "[MAIN] Setting ForkJoin thread ceiling to: " + cmd.GetValue("t"));
         }
         
         boolean debug = cmd.GetValue("debug").equals("true");
         
         switch(cmd.CurrentMode){
             case "cluster":
+                log.log(Level.INFO, "[MAIN] RAPTR-SV cluster mode selected.");
                 setFileHandler("cluster", args, debug);
                 ClusterMode cluster = new ClusterMode(cmd);
                 cluster.run();
                 break;
             case "preprocess":
+                log.log(Level.INFO, "[MAIN] RAPTR-SV preprocess mode selected.");
                 setFileHandler("preprocess", args, debug);
                 PreprocessMode preprocess = new PreprocessMode(cmd);
                 preprocess.run();
