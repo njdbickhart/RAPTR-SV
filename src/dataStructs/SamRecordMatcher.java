@@ -52,6 +52,8 @@ public class SamRecordMatcher extends TempDataClass {
     private BufferedWriter debugWriter;
     private Map<String, Map<String, Short>> anchorlookup;
     
+    private static final Logger log = Logger.getLogger(SamRecordMatcher.class.getName());
+    
     public SamRecordMatcher(int threshold, boolean checkRGs, String tmpoutname, Map<String, Integer[]> thresholds, boolean debug){
         this.threshold = threshold;
         this.checkRGs = checkRGs;
@@ -63,7 +65,7 @@ public class SamRecordMatcher extends TempDataClass {
             try {
                 this.debugWriter = Files.newBufferedWriter(this.debugOut, Charset.defaultCharset());
             } catch (IOException ex) {
-                Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+                log.log(Level.SEVERE, "[SAMMATCH] Error creating SamSupport.tab file!", ex);
             }
         }    
         this.tempOutBase = tmpoutname;
@@ -332,10 +334,14 @@ public class SamRecordMatcher extends TempDataClass {
                 .map((s) -> s.getLength()).reduce(0, Integer::sum);
     }
     
+    // TODO: instead of ignoring secondary aligments (0x256) try to generate split alignments from them
     private boolean isSplit(String[] segs){
         int fflags = Integer.parseInt(segs[3]);
         Cigar c = TextCigarCodec.getSingleton().decode(segs[7]);
-        return (((fflags & 0x4) == 0x4 && (fflags & 0x8) != 0x8)|| isOverSoftClipThreshold(c, segs[11].length()));
+        return (((fflags & 0x4) == 0x4 
+                && (fflags & 0x8) != 0x8 
+                && (fflags & 0x256) != 0x256) 
+                || (isOverSoftClipThreshold(c, segs[11].length()) && (fflags & 0x256) != 0x256));
     }
     
     private boolean isAnchor(String[] segs){
