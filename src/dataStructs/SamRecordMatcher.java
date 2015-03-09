@@ -6,6 +6,7 @@
 
 package dataStructs;
 
+import SetUtils.SortSetToList;
 import TempFiles.TempDataClass;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -17,7 +18,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -32,6 +35,7 @@ import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordIterator;
 import net.sf.samtools.TextCigarCodec;
 import stats.ReadNameUtility;
+import utils.SortByChr;
 
 /**
  * TODO: rewrite this class so that it does not extend TempDataClass
@@ -39,7 +43,9 @@ import stats.ReadNameUtility;
  */
 public class SamRecordMatcher extends TempDataClass {
     private final Map<SAMReadGroupRecord, Map<String, Map<Short, ArrayList<SAMRecord>>>> buffer = new HashMap<>();
-    private final Map<String, SamOutputHandle> SamTemp = new HashMap<>();
+    // Changed SamTemp to separate output files by chromosome as well for faster sorting
+    // Samtemp-> readgroup -> chr -> samoutputhandle
+    private final Map<String, Map<String, SamOutputHandle>> SamTemp = new ConcurrentHashMap<>();
     private int overhead = 0;
     private final int threshold;
     private final Map<String, Integer[]> thresholds;
@@ -117,8 +123,10 @@ public class SamRecordMatcher extends TempDataClass {
         short num = rn.GetCloneNum(a.getReadName(), a.getFlags());
         
         if(!SamTemp.containsKey(r.getId()))
-            SamTemp.put(r.getId(), new SamOutputHandle(this.threshold, r.getId(), this.tempOutBase));
-        SamTemp.get(r.getId()).bufferedAdd(a, clone, num);
+            SamTemp.put(r.getId(), new ConcurrentHashMap<>());
+        if(!SamTemp.get(r.getId()).containsKey(a.getReferenceName()))
+            SamTemp.get(r.getId()).put(a.getReferenceName(), new SamOutputHandle(this.threshold, r.getId(), this.tempOutBase));
+        SamTemp.get(r.getId()).get(a.getReferenceName()).bufferedAdd(a, clone, num);
     }
 
     @Override
@@ -151,9 +159,18 @@ public class SamRecordMatcher extends TempDataClass {
     public synchronized void combineRecordMatcher(SamRecordMatcher s){
         s.SamTemp.keySet().forEach((k) -> {
             if(!this.SamTemp.containsKey(k)){
-                this.SamTemp.put(k, new SamOutputHandle(this.threshold, k, this.tempOutBase));
+                this.SamTemp.put(k, new ConcurrentHashMap<>());
             }
-            this.SamTemp.get(k).combineTempFiles(s.SamTemp.get(k));
+            s.SamTemp.get(k).keySet().forEach((c) ->{
+                if(!this.SamTemp.get(k).containsKey(c))
+                    this.SamTemp.get(k).put(c, s.SamTemp.get(k).get(c));
+                else{
+                    //The program should never reach this stage, but I am putting this here to be complete
+                    log.log(Level.FINE, "[SAMMATCH] Had to combine records for rg: " + k + " and chr: " + c);
+                    this.SamTemp.get(k).get(c).combineTempFiles(s.SamTemp.get(k).get(c));
+                }
+            });
+            
         });
     }
     
@@ -170,14 +187,23 @@ public class SamRecordMatcher extends TempDataClass {
                     splits.get(s).OpenFQHandle();
                     divets.get(s).OpenHandle();
                     
-                    TempFileSorter(splits.get(s), divets.get(s), s, SamTemp.get(s));
+                    // Here we try to stream each chromosome in order but dump it in the same temp file for the readgroup
+                    List<String> orderedChrs = SortByChr.ascendingChr(SamTemp.get(s).keySet());
+                    orderedChrs.forEach((k) -> {
+                        try {
+                            TempFileSorter(splits.get(s), divets.get(s), s, SamTemp.get(s).get(k));
+                            log.log(Level.FINE, "[SAMMATCH] finished sorting temp file for rg: " + s + " chr: " + k);
+                        } catch (IOException ex) {
+                            Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+                        } catch (Exception ex) {
+                            Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    });                    
                     
                     // Close files to reduce number of open file handles later
                     divets.get(s).CloseHandle();
                     splits.get(s).CloseAnchorHandle();
                     splits.get(s).CloseFQHandle();
-                }catch(InterruptedException | IOException ex){
-                    Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
                 }catch(Exception ex){
                     Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -265,6 +291,10 @@ public class SamRecordMatcher extends TempDataClass {
         splits.CloseFQHandle();
         input.close();
         sort.waitFor();
+        
+        sort.getErrorStream().close();
+        sort.getInputStream().close();
+        sort.getOutputStream().close();
     }
     
     public void RetrieveMissingAnchors(Map<String, SplitOutputHandle> splits, SAMRecordIterator samItr){
