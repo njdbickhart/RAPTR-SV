@@ -139,7 +139,7 @@ public class SamRecordMatcher extends TempDataClass {
             SamTemp.put(r.getId(), new ConcurrentHashMap<>());
         if(!SamTemp.get(r.getId()).containsKey(bin))
             SamTemp.get(r.getId()).put(bin, new SamOutputHandle(this.threshold, r.getId(), this.tempOutBase));
-        SamTemp.get(r.getId()).get(a.getReferenceName()).bufferedAdd(a, clone, num);
+        SamTemp.get(r.getId()).get(bin).bufferedAdd(a, bin, num);
     }
 
     private long readNameHashBin(long hash){
