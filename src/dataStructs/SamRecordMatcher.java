@@ -131,7 +131,7 @@ public class SamRecordMatcher extends TempDataClass {
         short num = rn.GetCloneNum(a.getReadName(), a.getFlags());
         
         // The hash value takes up less space and should still be unique
-        long rnHash = clone.hashCode();
+        long rnHash = rn.ReadHash(clone);
         long bin = readNameHashBin(rnHash);
         //a.setReadName(String.valueOf(rnHash));
         
