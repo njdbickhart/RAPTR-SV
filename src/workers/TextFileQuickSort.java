@@ -48,18 +48,18 @@ public class TextFileQuickSort {
         private static final Logger log = Logger.getLogger(TextFileQuickSort.class.getName());
         private Path tempFile;
 
-        public TextFileQuickSort(String delimiter, int[] colOrder){
+        public TextFileQuickSort(String delimiter, int[] colOrder, String tmpoutbase){
 		this.sorter = new ComparatorDelegate(colOrder);
                 this.delimiter = delimiter;
                 this.colOrder = colOrder;
-                this.createTemp(Paths.get(System.getProperty("java.io.tmpdir")));
+                this.createTemp(Paths.get(tmpoutbase));
 	}
         
-	public TextFileQuickSort(Comparator<String[]> sorter, String delimiter, int[] colOrder){
+	public TextFileQuickSort(Comparator<String[]> sorter, String delimiter, int[] colOrder, String tmpoutbase){
 		this.sorter = sorter;
                 this.delimiter = delimiter;
                 this.colOrder = colOrder;
-                this.createTemp(Paths.get(System.getProperty("java.io.tmpdir")));
+                this.createTemp(Paths.get(tmpoutbase));
 	}
 
 	/**

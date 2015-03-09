@@ -183,7 +183,7 @@ public class SamRecordMatcher extends TempDataClass {
                     this.SamTemp.get(k).put(c, s.SamTemp.get(k).get(c));
                 else{
                     //The program should never reach this stage, but I am putting this here to be complete
-                    log.log(Level.FINE, "[SAMMATCH] Had to combine records for rg: " + k + " and chr: " + c);
+                    log.log(Level.FINE, "[SAMMATCH] Had to combine records for rg: " + k + " and bin: " + c);
                     this.SamTemp.get(k).get(c).combineTempFiles(s.SamTemp.get(k).get(c));
                 }
             });
@@ -201,7 +201,7 @@ public class SamRecordMatcher extends TempDataClass {
             if(!sortHolder.containsKey(e.getKey()))
                 sortHolder.put(e.getKey(), Collections.synchronizedList(new ArrayList<>()));
             e.getValue().entrySet().parallelStream().forEach((l) -> {
-                TextFileQuickSort t = new TextFileQuickSort("\t", new int[]{0,1});
+                TextFileQuickSort t = new TextFileQuickSort("\t", new int[]{0,1}, this.tempOutBase);
                 try {
                     t.splitChunks(new FileInputStream(l.getValue().getTempFile().toFile()), String.valueOf(l.getKey()));
                     t.mergeChunks();
