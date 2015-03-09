@@ -13,6 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import modes.ClusterMode;
 import modes.PreprocessMode;
+import stats.ConsoleFormat;
 import stats.LogFormat;
 
 /**
@@ -78,6 +79,7 @@ public class RPSRmain {
             handler = new FileHandler("RAPTR-SV." + type + ".%u.%g.log");
             handler.setFormatter(new LogFormat());
             console = new ConsoleHandler();
+            console.setFormatter(new ConsoleFormat());
             
             if(debug){
                 handler.setLevel(Level.ALL);
