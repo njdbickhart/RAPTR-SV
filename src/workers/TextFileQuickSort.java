@@ -134,7 +134,7 @@ public class TextFileQuickSort {
 			writer = new BufferedWriter(new OutputStreamWriter(os));
 			for ( String[] s : list ){
 				writer.write(StrArray.Join(s, delimiter));
-				writer.write("\n");
+				writer.write(System.lineSeparator());
 			}
 			writer.flush();
 		}catch(IOException io){

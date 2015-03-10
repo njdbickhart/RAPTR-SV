@@ -143,7 +143,7 @@ public class SamRecordMatcher extends TempDataClass {
     }
 
     private long readNameHashBin(long hash){
-        return hash >> 61;
+        return hash >> 60;
     }
     
     @Override
@@ -182,7 +182,6 @@ public class SamRecordMatcher extends TempDataClass {
                 if(!this.SamTemp.get(k).containsKey(c))
                     this.SamTemp.get(k).put(c, s.SamTemp.get(k).get(c));
                 else{
-                    //The program should never reach this stage, but I am putting this here to be complete
                     log.log(Level.FINE, "[SAMMATCH] Had to combine records for rg: " + k + " and bin: " + c);
                     this.SamTemp.get(k).get(c).combineTempFiles(s.SamTemp.get(k).get(c));
                 }
@@ -467,6 +466,7 @@ public class SamRecordMatcher extends TempDataClass {
                     String line;
                     while((line = in.readLine()) != null){
                         this.output.write(line);
+                        this.output.write(System.lineSeparator());
                     }
                     p.toFile().delete();
                 }catch(IOException ex){
