@@ -217,7 +217,7 @@ public class SamRecordMatcher extends TempDataClass {
         // OK, so the files should be concatenated after this!
         Map<String, TempSortFileHolder> mergeHolder = sortHolder.entrySet().stream()
                 .collect(Collectors.toConcurrentMap(e -> e.getKey(), (e) -> {
-                    TempSortFileHolder t = new TempSortFileHolder(Paths.get(System.getProperty("java.io.tmpdir")));
+                    TempSortFileHolder t = new TempSortFileHolder(Paths.get(this.tempOutBase));
                     t.ConcatenateFiles(e.getValue());
                     return t;
                 }));
