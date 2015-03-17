@@ -4,6 +4,9 @@ RAPTR-SV
 RAPTR-SV stands for "**R** e **A** d **P** air spli **T** - **R** ead **S** tructural **V** ariant." It is a program designed to process previously aligned, Illumina Paired-end whole genome sequence data to identify structural variants such as deletions, insertions and tandem duplications.
 
 ### Getting Started
+Much of the details for getting started with the program are currently on the [wiki](https://github.com/njdbickhart/RAPTR-SV/wiki)! Please refer to that for detailed usage and an example workflow.
+
+
 First, please download the latest JDK for Java version 1.8 (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
 
 In order to generate preliminary data using the "preprocess" mode, you will also need to download and install a version of MrsFAST (http://mrsfast.sourceforge.net/Home ). The MrsFAST executable must be installed into your $PATH in order to run the program.
