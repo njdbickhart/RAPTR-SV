@@ -35,6 +35,7 @@ public class BamMetadataGeneration {
     private final HashMap<String, ArrayList<Integer>> insertSizes = new HashMap<>();
     private SAMFileHeader header;
     private final boolean expectRG;
+    private int mostCommonReadLen;
     
     private static final Logger log = Logger.getLogger(BamMetadataGeneration.class.getName());
     
@@ -85,6 +86,7 @@ public class BamMetadataGeneration {
         }
         
         SAMRecordIterator itr = sam.iterator();
+        Map<Integer, Integer> readlens = new HashMap<>(samplimit);
         while(itr.hasNext()){
             SAMRecord s = itr.next();
             String rgid;
@@ -102,6 +104,10 @@ public class BamMetadataGeneration {
             if(s.getInferredInsertSize() == 0)
                 continue;
             
+            if(!readlens.containsKey(s.getReadLength()))
+                readlens.put(s.getReadLength(), 0);
+            else
+                readlens.put(s.getReadLength(), readlens.get(s.getReadLength()) + 1);
             if(!insertSizes.containsKey(rgid))
                 insertSizes.put(rgid, new ArrayList<>(samplimit));
             if(insertSizes.get(rgid).size() >= samplimit){
@@ -113,8 +119,20 @@ public class BamMetadataGeneration {
                 insertSizes.get(rgid).add(Math.abs(s.getInferredInsertSize()));
             }
         }
+        
+        // Determine the most frequent read length
+        int largest = 0;
+        for(int len : readlens.keySet()){
+            if(readlens.get(len) > largest){
+                this.mostCommonReadLen = len;
+                largest = readlens.get(len);
+            }
+        }
         itr.close();
         sam.close();
+        if(readlens.keySet().size() > 1){
+            log.log(Level.WARNING, "[METADATA] Identified more than one read length in BAM! Using most frequent sampled read length to filter split reads: " + this.mostCommonReadLen);
+        }
         log.log(Level.INFO, "[METADATA] Finished read insert size sampling.");
     }
 
@@ -144,7 +162,7 @@ public class BamMetadataGeneration {
     public Map<String, SplitOutputHandle> generateSplitOuts(String outbase){
         Map<String, SplitOutputHandle> holder = new ConcurrentHashMap<>();
         this.rgList.stream().forEach((s) -> {
-            holder.put(s, new SplitOutputHandle(outbase + "." + s + ".split.fq", outbase + "." + s + ".anchor.bam", header));
+            holder.put(s, new SplitOutputHandle(outbase + "." + s + ".split.fq", outbase + "." + s + ".anchor.bam", header, this.mostCommonReadLen));
             holder.get(s).OpenAnchorHandle();
         });
         return holder;

@@ -6,6 +6,9 @@ package workers;
 
 import GetCmdOpt.SimpleModeCmdLineParser;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -70,13 +73,20 @@ public class RPSRmain {
         
         System.exit(0);
     }
+    
+    private static String loggerDate(){
+        DateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
+        Date date = new Date();
+        return dateFormat.format(date);
+    }
 
     private static void setFileHandler(String type, String[] args, boolean debug) {
         // Create a log file and set levels for use with debugger
         FileHandler handler = null;
         ConsoleHandler console = null;
+        String datestr = loggerDate();
         try {
-            handler = new FileHandler("RAPTR-SV." + type + ".%u.%g.log");
+            handler = new FileHandler("RAPTR-SV." + type + "." + datestr + ".%u.%g.log");
             handler.setFormatter(new LogFormat());
             console = new ConsoleHandler();
             console.setFormatter(new ConsoleFormat());

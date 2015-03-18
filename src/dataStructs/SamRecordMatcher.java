@@ -339,6 +339,10 @@ public class SamRecordMatcher extends TempDataClass {
                 log.log(Level.WARNING, "WARNING! Found " + readState.get(3) + " read pairs that were missing BOTH identification tags in read group: " + rg  + "! Please check your input BAM file!");
         }
         
+        int splitTrims = splits.getTrims();
+        int splitDiscards = splits.getDiscards();
+        log.log(Level.INFO, "[SAMMATCH] While creating split reads, discarded: " + splitDiscards + " small reads and trimmed: " + splitTrims + " long reads out of: " + splits.getTotalSplits() + " total viable split reads.");
+        
         divets.CloseHandle();
         splits.CloseFQHandle();
         input.close();
