@@ -259,6 +259,14 @@ public class SamRecordMatcher extends TempDataClass {
         String[] lastsegs = null;
         ArrayList<String[]> records = new ArrayList<>();
         BufferedReader input = sam.GetTempReader();
+        
+        // This is a new counter designed to hold the divet state (ie. first clone or second clone missing)
+        Map<Short, Integer> readState = new HashMap<>();
+        readState.put((short)0, 0);
+        readState.put((short)1, 0);
+        readState.put((short)2, 0);
+        readState.put((short)3, 0);
+        
         while((line = input.readLine()) != null){
             line = line.trim();
             String[] segs = line.split("\t");
@@ -306,7 +314,13 @@ public class SamRecordMatcher extends TempDataClass {
                             }
                         });
                         converter.processLinesToDivets();
-                        divets.PrintDivetOut(converter.getDivets());
+                        short state = converter.getState();
+                        if(state != 0){
+                            readState.put(state, readState.get(state) + 1);
+                        }else{
+                            readState.put(state, readState.get(state) + 1);
+                            divets.PrintDivetOut(converter.getDivets());
+                        }
                     }
                     records.clear();
                 }
@@ -315,6 +329,16 @@ public class SamRecordMatcher extends TempDataClass {
             records.add(segs);
             last = segs[0];
         }
+        log.log(Level.FINE, "[SAMMATCH] identified: " + readState.get(0) + " read pairs that were proper discordant pairs in " + rg + " readname.");
+        if(readState.get(1) > 0 || readState.get(2) > 0 || readState.get(3) > 0){
+            if(readState.get(1) > 0)
+                log.log(Level.WARNING, "WARNING! Found " + readState.get(1) + " read pairs that were missing the first read in read group: " + rg);
+            if(readState.get(2) > 0)
+                log.log(Level.WARNING, "WARNING! Found " + readState.get(2) + " read pairs that were missing the second read in read group: " + rg);
+            if(readState.get(3) > 0)
+                log.log(Level.WARNING, "WARNING! Found " + readState.get(3) + " read pairs that were missing BOTH identification tags in read group: " + rg  + "! Please check your input BAM file!");
+        }
+        
         divets.CloseHandle();
         splits.CloseFQHandle();
         input.close();

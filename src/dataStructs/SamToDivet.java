@@ -21,6 +21,8 @@ public class SamToDivet {
     private final int lower;
     private final int upper;
     private final int cutoff;
+    private boolean firstAbsent = false;
+    private boolean secondAbsent = false;
     
     public SamToDivet(String clone, int lower, int upper, int cutoff){
         this.lines = new ArrayList<>();
@@ -47,16 +49,17 @@ public class SamToDivet {
         // Since we know that there should be only two keys, lets grab the first one
         short comp = 1;
         if(!holder.containsKey(comp)){
-            System.err.println("Sam file did not have a first clone!");
-            return;
+            this.firstAbsent = true;
         }
             
         short second = 2;
         if(!holder.containsKey(second)){
-            System.err.println("Sam file did not have a second clone!");
-            return;
+            this.secondAbsent = true;
         }
             
+        if(this.firstAbsent || this.secondAbsent){
+            return;
+        }
         // Divet file format:
     // 20VQ5P1:104:D09KFACXX:7:2106:7435:121010:0      chr27   23699238        23699288        F       23695946        23695996        F       delinv  0       37.47  1.00000000000000000000   1
         
@@ -213,6 +216,21 @@ public class SamToDivet {
             }
         }
         return "0";
+    }
+    
+    /**
+     *
+     * @return short value. "0" equals normal, "1" is firstclone missing, "2" is second clone missing, "3" is both clones missing
+     */
+    public short getState(){
+        if(this.firstAbsent && !this.secondAbsent)
+            return 1;
+        if(!this.firstAbsent && this.secondAbsent)
+            return 2;
+        if(this.firstAbsent && this.secondAbsent)
+            return 3;
+        else
+            return 0;
     }
     
     public ArrayList<divet> getDivets(){
