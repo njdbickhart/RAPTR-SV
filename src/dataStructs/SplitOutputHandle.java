@@ -44,6 +44,8 @@ public class SplitOutputHandle {
     private AtomicInteger trimCounter = new AtomicInteger(0);
     private AtomicInteger totalSplits = new AtomicInteger(0);
     
+    private static final Logger log = Logger.getLogger(SplitOutputHandle.class.getName());
+    
     public SplitOutputHandle(String file, String file2, SAMFileHeader sam, int readlen){
         fq1path = Paths.get(file);
         anchorpath = Paths.get(file2);
@@ -151,8 +153,9 @@ public class SplitOutputHandle {
         try {
             fq1.write(rn1 + nl + tS1 + nl + "+" + nl + tQ1 + nl);
             fq1.write(rn2 + nl + tS2 + nl + "+" + nl + tQ2 + nl);
+            fq1.flush();
         } catch (IOException ex) {
-            Logger.getLogger(SplitOutputHandle.class.getName()).log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, "[SPLITOUT] Error writing split file!", ex);
         }
     }
     
@@ -176,17 +179,16 @@ public class SplitOutputHandle {
         try{
             fq1 = Files.newBufferedWriter(fq1path, Charset.defaultCharset());
         }catch(IOException ex){
-            ex.printStackTrace();
+            log.log(Level.SEVERE, "[SPLITOUT] Error opening FQ handle!");
         }
         //fileopen = true;
     }
     
     public void CloseFQHandle(){
-        try{
-            fq1.flush();
+        try{           
             fq1.close();
         }catch(IOException ex){
-            ex.printStackTrace();
+            log.log(Level.SEVERE, "[SPLITOUT] Error closing FQ handle!");
         }
         //fileopen = false;
     }
