@@ -208,6 +208,8 @@ public class SamRecordMatcher extends TempDataClass {
                     log.log(Level.SEVERE, "[SAMMATCH] Could not open temp file for sorting!", ex);
                 } catch (IOException ex) {
                     log.log(Level.SEVERE, "[SAMMATCH] Error with temporary file merging!", ex);
+                } catch (Exception ex){
+                    log.log(Level.SEVERE, "[SAMMATCH] Error! Caught exception!", ex);
                 }
                 sortHolder.get(e.getKey()).add(t.getTemp());
             });
@@ -242,15 +244,15 @@ public class SamRecordMatcher extends TempDataClass {
                     splits.get(s).CloseAnchorHandle();
                     splits.get(s).CloseFQHandle();
                 }catch(Exception ex){
-                    Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+                    log.log(Level.SEVERE, "[SAMMATCH] Caught unknown exception (inner loop!)", ex);
                 }
             });
             if(debug)
                 this.debugWriter.close();
         } catch (IOException ex) {
-            Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, "[SAMMATCH] Error with opening file!", ex);
         } catch (Exception ex) {
-            Logger.getLogger(SamRecordMatcher.class.getName()).log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, "[SAMMATCH] Caught unknown exception (outer loop!)", ex);
         }
     }
     

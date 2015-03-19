@@ -22,7 +22,14 @@ public class LogFormat extends Formatter{
         buff.append(this.calcDate(lr.getMillis())).append(" -- ");
         buff.append(lr.getLevel()).append(" -- ");
         buff.append(lr.getSourceClassName()).append(" -> ").append(lr.getSourceMethodName()).append(" -- ");
-        buff.append(formatMessage(lr)).append(System.lineSeparator());
+        buff.append(formatMessage(lr));
+        if(lr.getThrown() != null){
+            for(StackTraceElement t : lr.getThrown().getStackTrace()){
+                buff.append("\t").append(t.getClassName()).append("--").append(t.getMethodName()).append("--").append(t.getLineNumber());
+                buff.append(System.lineSeparator());
+            }
+        }
+        buff.append(System.lineSeparator());
         return buff.toString();
     }
     
