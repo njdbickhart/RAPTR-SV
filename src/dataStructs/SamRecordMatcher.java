@@ -263,11 +263,11 @@ public class SamRecordMatcher extends TempDataClass {
         BufferedReader input = sam.GetTempReader();
         
         // This is a new counter designed to hold the divet state (ie. first clone or second clone missing)
-        Map<Short, Integer> readState = new HashMap<>();
-        readState.put((short)0, 0);
-        readState.put((short)1, 0);
-        readState.put((short)2, 0);
-        readState.put((short)3, 0);
+        Map<Integer, Integer> readState = new HashMap<>();
+        readState.put(0, 0);
+        readState.put(1, 0);
+        readState.put(2, 0);
+        readState.put(3, 0);
         
         while((line = input.readLine()) != null){
             line = line.trim();
@@ -316,7 +316,7 @@ public class SamRecordMatcher extends TempDataClass {
                             }
                         });
                         converter.processLinesToDivets();
-                        short state = converter.getState();
+                        int state = converter.getState();
                         if(state != 0){
                             readState.put(state, readState.get(state) + 1);
                         }else{

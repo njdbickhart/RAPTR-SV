@@ -220,9 +220,9 @@ public class SamToDivet {
     
     /**
      *
-     * @return short value. "0" equals normal, "1" is firstclone missing, "2" is second clone missing, "3" is both clones missing
+     * @return int value. "0" equals normal, "1" is firstclone missing, "2" is second clone missing, "3" is both clones missing
      */
-    public short getState(){
+    public int getState(){
         if(this.firstAbsent && !this.secondAbsent)
             return 1;
         if(!this.firstAbsent && this.secondAbsent)
