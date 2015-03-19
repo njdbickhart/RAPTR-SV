@@ -153,14 +153,15 @@ public class RPSRmain {
                 + "\t-o\tThe base output name and directory (all output files will start with this name)" + nl
                 + "\t-r\tA MrsFAST indexed reference genome fasta file for realignment" + nl
                 + "\t-g\tFlag: states if the BAM has read groups [optional; default is 'false']" + nl
+                + "\t-l\tBaseline read length to adjust/filter all BAM reads [optional; RAPTR-SV decides this after sampling your bam]" + nl
                 + "\t-t\tNumber of threads to use for preprocessing [optional; default is one thread]" + nl
                 + "\t-m\tMaximum distance between readpairs on the same chromosome [optional; default is 1000000]" + nl
                 + "\t-s\tMetadata sampling limit. Reducing this will reduce memory overhead. [optional; default is 10000]" + nl
                 + "\t-p\tAn alternate temp directory to write temporary data [optional; use if your /tmp partition is too small]" + nl,
-                "i:o:r:g|t:m:s:d|p:", 
+                "i:o:r:g|l:t:m:s:d|p:", 
                 "ior", 
-                "iorgtmsdp", 
-                "input", "output", "reference", "checkRG", "threads", "maxdist", "samplimit", "debug", "temp");
+                "iorgltmsdp", 
+                "input", "output", "reference", "checkRG", "readLen", "threads", "maxdist", "samplimit", "debug", "temp");
         
         return cmd;
     }

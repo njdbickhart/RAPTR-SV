@@ -42,6 +42,8 @@ public class PreprocessMode {
     private int threads = 1;
     private final String reference;
     private final boolean debug;
+    private final boolean adjustRL;
+    private int baselineRL = 0;
     
     private static final Logger log = Logger.getLogger(PreprocessMode.class.getName());
     
@@ -64,13 +66,28 @@ public class PreprocessMode {
         if(values.HasOpt("samplimit"))
             samplimit = Integer.parseInt(values.GetValue("samplimit"));
         
+        if(values.HasOpt("readLen")){
+            if(Integer.parseInt(values.GetValue("readLen")) < 50){
+                log.log(Level.SEVERE, "[PREPROCESS] Error with input command! Cannot process read length argument (-l) with value less than 50bp!");
+                log.log(Level.SEVERE, "[PREPROCESS] Split read alignment requires read lengths of 50bp or larger, please use a larger -l value.");
+                System.exit(1);
+            }
+            this.adjustRL = true;
+            this.baselineRL = Integer.parseInt(values.GetValue("readLen"));
+        }else
+            this.adjustRL = false;
+        
         debug = values.GetValue("debug").equals("true");
     }
     
     public void run(){
         // Generate BAM file metadata class
         log.log(Level.FINE, "[PREPROCESS] Beginning BAM metadata sampling...");
-        BamMetadataGeneration metadata = new BamMetadataGeneration(checkRG);
+        BamMetadataGeneration metadata;
+        if(this.adjustRL)
+            metadata = new BamMetadataGeneration(checkRG, this.baselineRL);
+        else
+            metadata = new BamMetadataGeneration(checkRG);
         metadata.ScanFile(input, samplimit);
         
         final Map<String, Integer[]> values = metadata.getThresholds(maxdist);

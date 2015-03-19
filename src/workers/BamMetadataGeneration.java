@@ -35,7 +35,7 @@ public class BamMetadataGeneration {
     private final HashMap<String, ArrayList<Integer>> insertSizes = new HashMap<>();
     private SAMFileHeader header;
     private final boolean expectRG;
-    private int mostCommonReadLen;
+    private int mostCommonReadLen = 0;
     
     private static final Logger log = Logger.getLogger(BamMetadataGeneration.class.getName());
     
@@ -48,6 +48,19 @@ public class BamMetadataGeneration {
     public BamMetadataGeneration(boolean hasRG){
         expectRG = hasRG;
         log.log(Level.FINE, "[METADATA] set bam read group information to: " + hasRG);
+    }
+    
+    /**
+     * Object constructor
+     * @param hasRG This is a boolean flag telling the MetadataGenerator to search the 
+     * BAM file for read groups and to treat them separately. A value of "false" will
+     * ignore all readgroups in the file.
+     * @param baseReadLen This allows the metadata generator to accept a baseline read length value from user input
+     */
+    public BamMetadataGeneration(boolean hasRG, int baseReadLen){
+        expectRG = hasRG;
+        this.mostCommonReadLen = baseReadLen;
+        log.log(Level.FINE, "[METADATA] set bam read group information to: " + hasRG + " and set baseline read len to: " + baseReadLen);
     }
     
     /**
@@ -121,18 +134,30 @@ public class BamMetadataGeneration {
         }
         
         // Determine the most frequent read length
-        int largest = 0;
-        for(int len : readlens.keySet()){
-            if(readlens.get(len) > largest){
-                this.mostCommonReadLen = len;
-                largest = readlens.get(len);
+        if(this.mostCommonReadLen == 0){
+            int largest = 0;
+            for(int len : readlens.keySet()){
+                if(readlens.get(len) > largest && len > 50){
+                    this.mostCommonReadLen = len;
+                    largest = readlens.get(len);
+                }
             }
+            if(this.mostCommonReadLen == 0){
+                // We didn't find a common read length that was greater than 50 bp! 
+                log.log(Level.SEVERE, "[METADATA] Error! Currently sampled read lengths are far too small for read splitting! (length < 50bp)");
+                System.exit(1);
+            }
+            
+            if(readlens.keySet().size() > 1){
+                log.log(Level.WARNING, "[METADATA] Identified more than one read length in BAM! Using most frequent sampled read length to filter split reads: " + this.mostCommonReadLen);
+            }            
+        }else{
+            log.log(Level.INFO, "[METADATA] Using user input expected read length: " + this.mostCommonReadLen);
         }
+        
         itr.close();
         sam.close();
-        if(readlens.keySet().size() > 1){
-            log.log(Level.WARNING, "[METADATA] Identified more than one read length in BAM! Using most frequent sampled read length to filter split reads: " + this.mostCommonReadLen);
-        }
+        
         log.log(Level.INFO, "[METADATA] Finished read insert size sampling.");
     }
 
