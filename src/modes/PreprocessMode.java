@@ -171,10 +171,10 @@ public class PreprocessMode {
         });
         mfact.getSams().keySet().stream().forEach((s) -> {
             try{
-                Files.deleteIfExists(Paths.get(s));
-                log.log(Level.FINE, "[PREPROCESS] Deleting file: " + s);
+                Files.deleteIfExists(Paths.get(mfact.getSams().get(s)));
+                log.log(Level.FINE, "[PREPROCESS] Deleting file: " + mfact.getSams().get(s));
             }catch(IOException ex){
-                log.log(Level.SEVERE, "[PREPROCESS] Could not delete file: " + s, ex);
+                log.log(Level.SEVERE, "[PREPROCESS] Could not delete file: " + mfact.getSams().get(s), ex);
             }
         });
     }
