@@ -183,6 +183,7 @@ public class SplitOutputHandle {
     
     public void CloseFQHandle(){
         try{
+            fq1.flush();
             fq1.close();
         }catch(IOException ex){
             ex.printStackTrace();
@@ -196,8 +197,10 @@ public class SplitOutputHandle {
     }
     
     public void CloseAnchorHandle(){
-        if(fileopen)
+        
+        if(fileopen){
             anchorOut.close();
+        }
         fileopen = false;
     }
         
