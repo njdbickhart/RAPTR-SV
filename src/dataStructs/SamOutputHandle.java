@@ -23,7 +23,7 @@ import net.sf.samtools.SAMRecord;
  * @author bickhart
  */
 public class SamOutputHandle extends TempDataClass{
-    private final Map<String, Map<Short, ArrayList<SAMRecord>>> buffer = new HashMap<>();
+    private final Map<Long, Map<Short, ArrayList<SAMRecord>>> buffer = new HashMap<>();
     private final int threshold;
     public final String readGroup;
     private int overhead = 0;
@@ -34,7 +34,7 @@ public class SamOutputHandle extends TempDataClass{
         this.createTemp(Paths.get(tmpoutname + "." + rg + "."));
     }
     
-    public void bufferedAdd(SAMRecord a, String clone, short num) {
+    public void bufferedAdd(SAMRecord a, Long clone, short num) {
         if(!buffer.containsKey(clone))
             buffer.put(clone, new HashMap<Short, ArrayList<SAMRecord>>());
         if(!buffer.get(clone).containsKey(num))
@@ -78,7 +78,7 @@ public class SamOutputHandle extends TempDataClass{
     public void dumpDataToDisk() {
         this.openTemp('A');
         try{
-            for(String clone : buffer.keySet()){
+            for(Long clone : buffer.keySet()){
                 for(short num : buffer.get(clone).keySet()){
                     for(SAMRecord sam : buffer.get(clone).get(num)){
                         this.output.write(clone + "\t" + num + "\t" + sam.getSAMString());

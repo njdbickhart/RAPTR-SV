@@ -26,6 +26,8 @@ public class MrsFastExecutable implements Callable<String>{
     private final String rg;
     private final boolean isUltra;
     
+    private static final Logger log = Logger.getLogger(MrsFastExecutable.class.getName());
+    
     public MrsFastExecutable(String ref, String fq, String mrsfastsam, String rg){
         reference = ref;
         fastq = fq;
@@ -45,7 +47,7 @@ public class MrsFastExecutable implements Callable<String>{
         }else{
             pb = new ProcessBuilder("mrsfast", "--search", reference, "--seq", fastq, "-o", sam);
         }
-        //pb.redirectErrorStream(true);
+        pb.redirectErrorStream(true);
         //pb.redirectOutput(ProcessBuilder.Redirect.PIPE.file());
         final Process p = pb.start();
         // input stream thread
@@ -58,10 +60,10 @@ public class MrsFastExecutable implements Callable<String>{
                     while((line = in.readLine()) != null){
                         //out.write(line);
                         //out.newLine();
-                        System.out.println(rg + "> " + line);
+                        log.log(Level.INFO, rg + "> " + line);
                     }
                 } catch (IOException ex) {            
-                    Logger.getLogger(MrsFastExecutable.class.getName()).log(Level.SEVERE, null, ex);
+                    log.log(Level.SEVERE, "[MRSFASTEX] Issue with output!", ex);
                 }
                 //out.close();
             }catch(IOException ex){

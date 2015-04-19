@@ -12,7 +12,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sf.samtools.CigarElement;
@@ -39,12 +39,23 @@ public class SplitOutputHandle {
     private final SAMFileHeader header;
     private boolean fileopen = false;
     private final TextCigarCodec cd = TextCigarCodec.getSingleton();
+    private final int splitreadlen;
+    private AtomicInteger discardCounter = new AtomicInteger(0);
+    private AtomicInteger trimCounter = new AtomicInteger(0);
+    private AtomicInteger totalSplits = new AtomicInteger(0);
     
-    public SplitOutputHandle(String file, String file2, SAMFileHeader sam){
+    private static final Logger log = Logger.getLogger(SplitOutputHandle.class.getName());
+    
+    public SplitOutputHandle(String file, String file2, SAMFileHeader sam, int readlen){
         fq1path = Paths.get(file);
         anchorpath = Paths.get(file2);
         header = sam;
         //this.OpenFQHandle();
+        
+        if(readlen % 2 != 0)
+            readlen -= 1; // accounting for odd number of bases in a read
+        
+        this.splitreadlen = readlen / 2;
         
         //TODO: make this a buffer in order and close file handles in an orderly fashion
     }
@@ -107,19 +118,44 @@ public class SplitOutputHandle {
         // TODO: Unfortunately, Mrsfast does not allow for split read alignment of
         // variable length reads. I will have to implement a side method that 
         // processes the reads differently based on their length
-        int splitter = Math.floorDiv(len, 2);
         
-        String tS1 = segs[11].substring(0, splitter);
-        String tS2 = segs[11].substring(splitter, splitter * 2);
-
-        String tQ1 = segs[12].substring(0, splitter);
-        String tQ2 = segs[12].substring(splitter, splitter * 2);
+        if(len % 2 != 0)
+            len -= 1;
+        int splitter = len / 2;
+        
+        String tS1, tS2, tQ1, tQ2;
+        
+        if(splitter < this.splitreadlen){
+            // This read is far too small, and should be discarded
+            this.discardCounter.incrementAndGet();
+            return;
+        }else if(splitter > this.splitreadlen){
+            // The read is large enough that we can work with it!
+            // We split the read in the middle, but we remove the bases on the 5' and 3' ends
+            int diff = splitter - this.splitreadlen;
+            this.trimCounter.incrementAndGet();
+            tS1 = segs[11].substring(diff, splitter);
+            tS2 = segs[11].substring(splitter, (splitter * 2) - diff);
+            
+            tQ1 = segs[12].substring(diff, splitter);
+            tQ2 = segs[12].substring(splitter, (splitter * 2) - diff);
+        }else{
+            // The read is the right size, so the splitting is really easy
+            tS1 = segs[11].substring(0, splitter);
+            tS2 = segs[11].substring(splitter, splitter * 2);
+            
+            tQ1 = segs[12].substring(0, splitter);
+            tQ2 = segs[12].substring(splitter, splitter * 2);
+        }      
+        
+        this.totalSplits.incrementAndGet();
         
         try {
             fq1.write(rn1 + nl + tS1 + nl + "+" + nl + tQ1 + nl);
             fq1.write(rn2 + nl + tS2 + nl + "+" + nl + tQ2 + nl);
+            fq1.flush();
         } catch (IOException ex) {
-            Logger.getLogger(SplitOutputHandle.class.getName()).log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, "[SPLITOUT] Error writing split file!", ex);
         }
     }
     
@@ -143,16 +179,16 @@ public class SplitOutputHandle {
         try{
             fq1 = Files.newBufferedWriter(fq1path, Charset.defaultCharset());
         }catch(IOException ex){
-            ex.printStackTrace();
+            log.log(Level.SEVERE, "[SPLITOUT] Error opening FQ handle!");
         }
         //fileopen = true;
     }
     
     public void CloseFQHandle(){
-        try{
+        try{           
             fq1.close();
         }catch(IOException ex){
-            ex.printStackTrace();
+            log.log(Level.SEVERE, "[SPLITOUT] Error closing FQ handle!");
         }
         //fileopen = false;
     }
@@ -163,8 +199,10 @@ public class SplitOutputHandle {
     }
     
     public void CloseAnchorHandle(){
-        if(fileopen)
+        
+        if(fileopen){
             anchorOut.close();
+        }
         fileopen = false;
     }
         
@@ -178,5 +216,17 @@ public class SplitOutputHandle {
     
     public String getAnchorFileStr(){
         return this.anchorpath.toAbsolutePath().toString();
+    }
+    
+    public int getDiscards(){
+        return this.discardCounter.intValue();
+    }
+    
+    public int getTrims(){
+        return this.trimCounter.intValue();
+    }
+    
+    public int getTotalSplits(){
+        return this.totalSplits.intValue();
     }
 }

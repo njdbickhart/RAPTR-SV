@@ -20,6 +20,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
@@ -34,12 +36,16 @@ import workers.MrsFastRuntimeFactory;
 public class PreprocessMode {
     private boolean checkRG = false;
     private final String outbase;
-    private int samplimit = 1000;
-    private int maxdist = 100000;
+    private int samplimit = 10000;
+    private int maxdist = 1000000;
     private final String input;
     private int threads = 1;
     private final String reference;
     private final boolean debug;
+    private final boolean adjustRL;
+    private int baselineRL = 0;
+    
+    private static final Logger log = Logger.getLogger(PreprocessMode.class.getName());
     
     public PreprocessMode(SimpleModeCmdLineParser values){
         outbase = values.GetValue("output");
@@ -60,12 +66,28 @@ public class PreprocessMode {
         if(values.HasOpt("samplimit"))
             samplimit = Integer.parseInt(values.GetValue("samplimit"));
         
+        if(values.HasOpt("readLen")){
+            if(Integer.parseInt(values.GetValue("readLen")) < 50){
+                log.log(Level.SEVERE, "[PREPROCESS] Error with input command! Cannot process read length argument (-l) with value less than 50bp!");
+                log.log(Level.SEVERE, "[PREPROCESS] Split read alignment requires read lengths of 50bp or larger, please use a larger -l value.");
+                System.exit(1);
+            }
+            this.adjustRL = true;
+            this.baselineRL = Integer.parseInt(values.GetValue("readLen"));
+        }else
+            this.adjustRL = false;
+        
         debug = values.GetValue("debug").equals("true");
     }
     
     public void run(){
         // Generate BAM file metadata class
-        BamMetadataGeneration metadata = new BamMetadataGeneration(checkRG);
+        log.log(Level.FINE, "[PREPROCESS] Beginning BAM metadata sampling...");
+        BamMetadataGeneration metadata;
+        if(this.adjustRL)
+            metadata = new BamMetadataGeneration(checkRG, this.baselineRL);
+        else
+            metadata = new BamMetadataGeneration(checkRG);
         metadata.ScanFile(input, samplimit);
         
         final Map<String, Integer[]> values = metadata.getThresholds(maxdist);
@@ -75,6 +97,8 @@ public class PreprocessMode {
         System.err.println("[PREPROCESS] Read input file and calculated sample thresholds.");
         metadata.getSampleIDs().stream().forEach((s) -> {
             System.err.println("Sample: " + s + " Avg Ins size: " + metadata.getSampleInsSize(s) +
+                    " Stdev Ins size: " + metadata.getSampleInsStd(s));
+            log.log(Level.INFO, "[PREPROCESS] Sample: " + s + " Avg Ins size: " + metadata.getSampleInsSize(s) +
                     " Stdev Ins size: " + metadata.getSampleInsStd(s));
         });
         
@@ -96,8 +120,10 @@ public class PreprocessMode {
                     temp.close();
                     System.out.print("                                                                                        \r");
                     System.out.print("[SAMRECORD] Working on SAM chunk: " + b.Chr() + "\t" + b.Start() + "\t" + b.End() + "\r");
+                    log.log(Level.INFO, "[SAMRECORD] Working on SAM chunk: " + b.Chr() + "\t" + b.Start() + "\t" + b.End());
                 }catch(Exception ex){
                     System.err.println("[SAMRECORD] Error with SAM query for: " + b.Chr() + "\t" + b.Start() + "\t" + b.End());
+                    log.log(Level.SEVERE, "[SAMRECORD] Error with SAM chunk: " + b.Chr() + "\t" + b.Start() + "\t" + b.End());
                     ex.printStackTrace();
                 }
                 return w;
@@ -132,6 +158,7 @@ public class PreprocessMode {
         worker.RetrieveMissingAnchors(splits, next.iterator());
         
         System.err.println("[PREPROCESS] Generated initial split and divet data.");
+        log.log(Level.INFO, "[PREPROCESS] Generated initial split and divet data.");
         // Run MrsFAST on the split fastqs and generate bam files
         MrsFastRuntimeFactory mfact = new MrsFastRuntimeFactory(threads, metadata.getSamFileHeader());
         mfact.ProcessSplitFastqs(splits, reference, outbase);
@@ -150,18 +177,21 @@ public class PreprocessMode {
         }
         
         System.err.println("[PREPROCESS] Cleaning up temporary files...");
+        log.log(Level.INFO, "[PREPROCESS] Generated initial split and divet data.");
         splits.keySet().stream().forEach((s) -> {
             try{
                 Files.deleteIfExists(Paths.get(splits.get(s).fq1File()));
+                log.log(Level.FINE, "[PREPROCESS] Deleting file: " + splits.get(s).fq1File().toString());
             }catch(IOException ex){
-                ex.printStackTrace();
+                log.log(Level.SEVERE, "[PREPROCESS] Could not delete file: " + splits.get(s).fq1File().toString(), ex);
             }
         });
         mfact.getSams().keySet().stream().forEach((s) -> {
             try{
-                Files.deleteIfExists(Paths.get(s));
+                Files.deleteIfExists(Paths.get(mfact.getSams().get(s)));
+                log.log(Level.FINE, "[PREPROCESS] Deleting file: " + mfact.getSams().get(s));
             }catch(IOException ex){
-                ex.printStackTrace();
+                log.log(Level.SEVERE, "[PREPROCESS] Could not delete file: " + mfact.getSams().get(s), ex);
             }
         });
     }
@@ -187,6 +217,7 @@ public class PreprocessMode {
             // I changed this to chromosome lengths in order to avoid instances where
             // reads that mapped on the peripheries of query sites would be lost
             // in the queried samiterator object
+            log.log(Level.FINE, "[PREPROCESS] Sam interval detected: " + chr + "\t" + 0 + "\t" + len);
             return new BedSimple(chr, 0, len);
         }).collect(Collectors.toList());
         return coords;

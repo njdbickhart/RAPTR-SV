@@ -21,6 +21,8 @@ public class SamToDivet {
     private final int lower;
     private final int upper;
     private final int cutoff;
+    private boolean firstAbsent = false;
+    private boolean secondAbsent = false;
     
     public SamToDivet(String clone, int lower, int upper, int cutoff){
         this.lines = new ArrayList<>();
@@ -47,23 +49,24 @@ public class SamToDivet {
         // Since we know that there should be only two keys, lets grab the first one
         short comp = 1;
         if(!holder.containsKey(comp)){
-            //System.err.println("Sam file did not have a first clone!");
-            return;
+            this.firstAbsent = true;
         }
             
         short second = 2;
         if(!holder.containsKey(second)){
-            //System.err.println("Sam file did not have a second clone!");
-            return;
+            this.secondAbsent = true;
         }
             
+        if(this.firstAbsent || this.secondAbsent){
+            return;
+        }
         // Divet file format:
     // 20VQ5P1:104:D09KFACXX:7:2106:7435:121010:0      chr27   23699238        23699288        F       23695946        23695996        F       delinv  0       37.47  1.00000000000000000000   1
         
         for(String[] first : holder.get(comp)){
             String forient, fchr = first[4], fstart = first[5], 
-                    fend = String.valueOf(Integer.parseInt(first[5]) + first[11].length()),
-                    fmdz = this.getMDZTag(first, first[11]);
+                    fend = String.valueOf(Integer.parseInt(first[5]) + first[11].length());
+                    //fmdz = this.getMDZTag(first, first[11]);
             int fedit = Integer.parseInt(this.getNMITag(first));
             //double fprob = stats.probBasedPhred.calculateScore(fmdz, first[11], first[11].length());
             // TESTING if mapping probability is better estimate of read mapping
@@ -78,8 +81,8 @@ public class SamToDivet {
                 if(sec[5].startsWith("chr"))
                     System.out.println(StrUtils.StrArray.Join(sec, "\t"));
                 String sorient, schr = sec[4], sstart = sec[5], 
-                        send = String.valueOf(Integer.parseInt(sec[5]) + sec[11].length()),
-                        smdz = this.getMDZTag(sec, sec[11]);
+                        send = String.valueOf(Integer.parseInt(sec[5]) + sec[11].length());
+                        //smdz = this.getMDZTag(sec, sec[11]);
                 int concordant = 0, sedit = Integer.parseInt(this.getNMITag(sec));
                 //double sprob = stats.probBasedPhred.calculateScore(smdz, sec[12], sec[12].length());
                 // TESTING if mapping probability is better estimate of read mapping
@@ -194,15 +197,16 @@ public class SamToDivet {
         return 0;
     }
     
-    private String getMDZTag(String[] array, String read){
-        for(String s : array){
-            if(s.matches("MD:Z:.*")){
-                String[] tokens = s.split(":");
-                return tokens[2];
-            }
-        }
-        return String.valueOf(read.length());
+    // Utility for probability-based phred estimate -- no longer needed
+    /*private String getMDZTag(String[] array, String read){
+    for(String s : array){
+    if(s.matches("MD:Z:.*")){
+    String[] tokens = s.split(":");
+    return tokens[2];
     }
+    }
+    return String.valueOf(read.length());
+    }*/
     
     private String getNMITag(String[] array){
         for(String s : array){
@@ -212,6 +216,21 @@ public class SamToDivet {
             }
         }
         return "0";
+    }
+    
+    /**
+     *
+     * @return int value. "0" equals normal, "1" is firstclone missing, "2" is second clone missing, "3" is both clones missing
+     */
+    public int getState(){
+        if(this.firstAbsent && !this.secondAbsent)
+            return 1;
+        if(!this.firstAbsent && this.secondAbsent)
+            return 2;
+        if(this.firstAbsent && this.secondAbsent)
+            return 3;
+        else
+            return 0;
     }
     
     public ArrayList<divet> getDivets(){

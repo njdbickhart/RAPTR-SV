@@ -6,7 +6,6 @@ package stats;
 
 import file.BedAbstract;
 import file.BedMap;
-import utils.BinBed;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -17,7 +16,7 @@ import java.util.Set;
  * @author bickhart
  */
 public class GapOverlap {
-    private GapMap gapList;    
+    private final GapMap gapList;    
     
     public GapOverlap(String inFile){
         this.gapList = new GapMap(Paths.get(inFile), 0);

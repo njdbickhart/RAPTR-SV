@@ -7,8 +7,24 @@
 package modes;
 
 import GetCmdOpt.SimpleModeCmdLineParser;
+import StrUtils.StrArray;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import net.sf.samtools.SAMFileReader;
 import setWeightCover.weightCoverEvents;
 import workers.BufferedSetReader;
+import workers.FlatFile;
 import workers.OutputEvents;
 import workers.OutputInversion;
 
@@ -18,7 +34,8 @@ import workers.OutputInversion;
  */
 public class ClusterMode {
     private final String flatFile;
-    private final String chr;
+    private String chr;
+    private boolean processChr = false;
     private final String gapFile;
     private final String outBase;
     private final boolean debug;
@@ -28,10 +45,22 @@ public class ClusterMode {
     private int threads = 1;
     private double rpPhredFilter = 0.0001d;
     
+    private static final Logger log = Logger.getLogger(ClusterMode.class.getName());
+    
     public ClusterMode(SimpleModeCmdLineParser values){
         flatFile = values.GetValue("flatfile");
-        chr = values.GetValue("chromosome");
-        gapFile = values.GetValue("gapfile");
+        if(values.HasOpt("chromosome")){
+            chr = values.GetValue("chromosome");
+            processChr = true;
+            log.log(Level.FINE, "[CLUSTER] use of single chromosome option: -c " + chr);
+        }
+        if(values.HasOpt("gapfile")){
+            gapFile = values.GetValue("gapfile");
+            log.log(Level.FINE, "[CLUSTER] use of gap file for filtration: -g " + gapFile);
+        }else{
+            gapFile = "NULL";
+            log.log(Level.FINE, "[CLUSTER] gap file not submitted.");
+        }
         outBase = values.GetValue("outbase");
         if(values.HasOpt("buffer"))
             buffer = Integer.parseInt(values.GetValue("buffer"));
@@ -49,29 +78,99 @@ public class ClusterMode {
     }
     
     public void run(){
+        ArrayList<FlatFile> files = this.identifyFiles(flatFile);
+        log.log(Level.INFO, "[CLUSTER] identified: " + files.size() + " flatfile lines");
+        
+        // Create output file holders
+        OutputEvents insertions = createOutputEvents(outBase + ".raptr.insertions", debug);
+        OutputEvents deletions = createOutputEvents(outBase + ".raptr.deletions", debug);
+        OutputEvents tanddup = createOutputEvents(outBase + ".raptr.tand", debug);
+        //OutputInversion inversions = new OutputInversion(outBase + ".raptr.inversions");
+        
+        if(this.processChr){
+            log.log(Level.FINE, "[CLUSTER] processing chromosome.");
+            processChr(files, chr, insertions, deletions, tanddup);
+        }else{
+            // Determine chromosomes from split read bam file
+            Set<String> chrs = this.identifyChrs(files);
+            for(String c : chrs){
+                log.log(Level.FINE, "[CLUSTER] processing multiple chromosomes. Now chromosome: " + c);
+                processChr(files, c, insertions, deletions, tanddup);
+            }
+        }
+    }
+
+    private void processChr(ArrayList<FlatFile> files, String chr, OutputEvents insertions, OutputEvents deletions, OutputEvents tanddup) {
         // Read input files and place into preliminary containers
-        //readInputFiles fileParser = new readInputFiles(cmd.flatFile, cmd.gapFile, cmd.chr);
-        BufferedSetReader reader = new BufferedSetReader(flatFile, gapFile, chr, buffer, rpPhredFilter);
+        System.out.println("[CLUSTER] Working on chromosome: " + chr + " ...");
+        BufferedSetReader reader = new BufferedSetReader(files, gapFile, chr, buffer, rpPhredFilter);
+        log.log(Level.FINE, "[CLUSTER] exited reader creation for chr: " + chr);
         
         // Run set weight cover to cluster sets
-        
         weightCoverEvents finalEvents = new weightCoverEvents(reader.getMap(), chr, debug, threshold, threads, phredFilter);
+        log.log(Level.FINE, "[CLUSTER] exited weightCoverEvents creation for chr: " + chr);
         finalEvents.calculateInitialSetStats();
-        
+        log.log(Level.FINE, "[CLUSTER] exited weightCoverEvents.calculateInitialSetStats for chr: " + chr);
         finalEvents.run();
+        log.log(Level.FINE, "[CLUSTER] exited weightCoverEvents.run for chr: " + chr);
         
         // Output results
-        OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), outBase + ".rpsr.insertions", debug);
+        //OutputEvents insertions = new OutputEvents(finalEvents.RetIns(), outBase + ".rpsr.insertions", debug);
+        insertions.AddSets(finalEvents.RetIns());
         insertions.WriteOut();
         
-        OutputEvents deletions = new OutputEvents(finalEvents.RetDel(), outBase + ".rpsr.deletions", debug);
+        //OutputEvents deletions = new OutputEvents(finalEvents.RetDel(), outBase + ".rpsr.deletions", debug);
+        deletions.AddSets(finalEvents.RetDel());
         deletions.WriteOut();
         
-        OutputEvents tanddup = new OutputEvents(finalEvents.RetTand(), outBase + ".rpsr.tand", debug);
+        //OutputEvents tanddup = new OutputEvents(finalEvents.RetTand(), outBase + ".rpsr.tand", debug);
+        tanddup.AddSets(finalEvents.RetTand());
         tanddup.WriteOut();
         
-        OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), outBase + ".rpsr.inversions");
-        inversions.WriteOut();
-        System.exit(0);
+        //OutputInversion inversions = new OutputInversion(finalEvents.RetInv(), outBase + ".rpsr.inversions");
+        //inversions.AddSets(finalEvents.RetInv());
+        //inversions.WriteOut();
+        
+        log.log(Level.FINE, "[CLUSTER] wrote output to event files for chr: " + chr);
     }
+    
+    private OutputEvents createOutputEvents(String outbaseExt, boolean debug){
+        return new OutputEvents(outbaseExt, debug);
+    }
+    
+    private ArrayList<FlatFile> identifyFiles(String file){
+        ArrayList<FlatFile> output = new ArrayList<>();
+        try(BufferedReader input = Files.newBufferedReader(Paths.get(file), Charset.forName("UTF-8"))){
+            String line;
+            while((line = input.readLine()) != null){
+                FlatFile flat = new FlatFile(line);
+                output.add(flat);
+            }
+        }catch(IOException ex){
+            Logger.getLogger(BufferedReader.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return output;
+    }
+    
+    private Set<String> identifyChrs(ArrayList<FlatFile> files){
+        Set<String> set =  files.stream()
+                .map(s -> this.getChrsFromBam(s.getSplitsam().toFile()))
+                .flatMap(List::stream)
+                .collect(Collectors.toCollection(HashSet::new));
+        log.log(Level.INFO, "[CLUSTER] identified: " + set.size() + " chromosomes from split bam header.");
+        return set;
+    }
+    
+    private List<String> getChrsFromBam(File sam){
+        SAMFileReader samr = new SAMFileReader(sam);
+        log.log(Level.FINE, "[CLUSTER] extracting chromosomes from bam header: " + sam.toString());
+        List<String> headers = samr.getFileHeader()
+                .getSequenceDictionary()
+                .getSequences().stream()
+                    .map(s -> s.getSequenceName())
+                    .collect(Collectors.toList());
+        log.log(Level.FINE, "[CLUSTER] using the following chromosomes for cluster automation: " + StrArray.Join((ArrayList<String>) headers, ", "));
+        return headers;
+    }
+    
 }

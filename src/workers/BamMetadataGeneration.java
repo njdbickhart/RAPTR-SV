@@ -6,6 +6,7 @@
 
 package workers;
 
+import StrUtils.StrArray;
 import dataStructs.DivetOutputHandle;
 import dataStructs.SplitOutputHandle;
 import java.io.File;
@@ -14,6 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import net.sf.samtools.BAMIndexer;
 import net.sf.samtools.SAMFileHeader;
@@ -32,6 +35,9 @@ public class BamMetadataGeneration {
     private final HashMap<String, ArrayList<Integer>> insertSizes = new HashMap<>();
     private SAMFileHeader header;
     private final boolean expectRG;
+    private int mostCommonReadLen = 0;
+    
+    private static final Logger log = Logger.getLogger(BamMetadataGeneration.class.getName());
     
     /**
      * Object constructor
@@ -41,6 +47,20 @@ public class BamMetadataGeneration {
      */
     public BamMetadataGeneration(boolean hasRG){
         expectRG = hasRG;
+        log.log(Level.FINE, "[METADATA] set bam read group information to: " + hasRG);
+    }
+    
+    /**
+     * Object constructor
+     * @param hasRG This is a boolean flag telling the MetadataGenerator to search the 
+     * BAM file for read groups and to treat them separately. A value of "false" will
+     * ignore all readgroups in the file.
+     * @param baseReadLen This allows the metadata generator to accept a baseline read length value from user input
+     */
+    public BamMetadataGeneration(boolean hasRG, int baseReadLen){
+        expectRG = hasRG;
+        this.mostCommonReadLen = baseReadLen;
+        log.log(Level.FINE, "[METADATA] set bam read group information to: " + hasRG + " and set baseline read len to: " + baseReadLen);
     }
     
     /**
@@ -55,6 +75,7 @@ public class BamMetadataGeneration {
         sam.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
         if(!sam.hasIndex()){
             System.out.println("[METADATA] Could not find bam index file. Creating one now...");
+            log.log(Level.INFO, "[METADATA] Generating bam index file for file: " + input);
             BAMIndexer b = new BAMIndexer(new File(input + ".bai"), sam.getFileHeader());
             sam.enableFileSource(true);
             sam.iterator().forEachRemaining((s) -> {
@@ -62,6 +83,7 @@ public class BamMetadataGeneration {
             b.finish();
             sam.close();
             System.out.println("[METADATA] Finished with bam index generation.");
+            log.log(Level.FINE, "[METADATA] Finished generating bam index file.");
             sam = new SAMFileReader(new File(input));
         }
         //sam.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
@@ -70,10 +92,14 @@ public class BamMetadataGeneration {
             
             List<SAMReadGroupRecord> temp = header.getReadGroups();
             temp.forEach((e) -> rgList.add(e.getId()));
-        }else
+            log.log(Level.FINE, "[METADATA] processing the following read groups: " + StrArray.Join((ArrayList<String>) rgList, "\t"));
+        }else{
             rgList.add("D");
+            log.log(Level.FINE, "[METADATA] Not considering read groups.");
+        }
         
         SAMRecordIterator itr = sam.iterator();
+        Map<Integer, Integer> readlens = new HashMap<>(samplimit);
         while(itr.hasNext()){
             SAMRecord s = itr.next();
             String rgid;
@@ -91,17 +117,48 @@ public class BamMetadataGeneration {
             if(s.getInferredInsertSize() == 0)
                 continue;
             
+            if(!readlens.containsKey(s.getReadLength()))
+                readlens.put(s.getReadLength(), 0);
+            else
+                readlens.put(s.getReadLength(), readlens.get(s.getReadLength()) + 1);
             if(!insertSizes.containsKey(rgid))
                 insertSizes.put(rgid, new ArrayList<>(samplimit));
             if(insertSizes.get(rgid).size() >= samplimit){
-                if(checkIfSamplingDone(samplimit))
+                if(checkIfSamplingDone(samplimit)){
+                    log.log(Level.FINE, "[METADATA] Sampling complete for readgroup: " + rgid);
                     break;
+                }
             }else{
                 insertSizes.get(rgid).add(Math.abs(s.getInferredInsertSize()));
             }
         }
+        
+        // Determine the most frequent read length
+        if(this.mostCommonReadLen == 0){
+            int largest = 0;
+            for(int len : readlens.keySet()){
+                if(readlens.get(len) > largest && len > 50){
+                    this.mostCommonReadLen = len;
+                    largest = readlens.get(len);
+                }
+            }
+            if(this.mostCommonReadLen == 0){
+                // We didn't find a common read length that was greater than 50 bp! 
+                log.log(Level.SEVERE, "[METADATA] Error! Currently sampled read lengths are far too small for read splitting! (length < 50bp)");
+                System.exit(1);
+            }
+            
+            if(readlens.keySet().size() > 1){
+                log.log(Level.WARNING, "[METADATA] Identified more than one read length in BAM! Using most frequent sampled read length to filter split reads: " + this.mostCommonReadLen);
+            }            
+        }else{
+            log.log(Level.INFO, "[METADATA] Using user input expected read length: " + this.mostCommonReadLen);
+        }
+        
         itr.close();
         sam.close();
+        
+        log.log(Level.INFO, "[METADATA] Finished read insert size sampling.");
     }
 
     /**
@@ -130,7 +187,7 @@ public class BamMetadataGeneration {
     public Map<String, SplitOutputHandle> generateSplitOuts(String outbase){
         Map<String, SplitOutputHandle> holder = new ConcurrentHashMap<>();
         this.rgList.stream().forEach((s) -> {
-            holder.put(s, new SplitOutputHandle(outbase + "." + s + ".split.fq", outbase + "." + s + ".anchor.bam", header));
+            holder.put(s, new SplitOutputHandle(outbase + "." + s + ".split.fq", outbase + "." + s + ".anchor.bam", header, this.mostCommonReadLen));
             holder.get(s).OpenAnchorHandle();
         });
         return holder;
@@ -165,9 +222,10 @@ public class BamMetadataGeneration {
                     .filter(s -> s > median + (mad * 20))
                     .count();
             
-            if(fvalues > 0)
+            if(fvalues > 0){
                 System.err.println("[METADATA] Identified " + fvalues + " sampled insert lengths greater than a Median (" + median + ") * 10 MAD (" + mad + ") in RG:" + r);
-            
+                log.log(Level.INFO, "[METADATA] Identified " + fvalues + " sampled insert lengths greater than a Median (" + median + ") * 10 MAD (" + mad + ") in RG:" + r);
+            }
             double avg = stats.StdevAvg.IntAvg(filtered);
             double stdev = stats.StdevAvg.stdevInt(avg, filtered);
             Double[] d = {avg, stdev};
