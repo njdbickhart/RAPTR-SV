@@ -39,6 +39,7 @@ public class MrsFastRuntimeFactory{
     private final Map<String, String> bamfiles = new HashMap<>();
     private final Map<String, String> samfiles = new HashMap<>();
     
+    private static final Logger log = Logger.getLogger(MrsFastRuntimeFactory.class.getName());
     
     public MrsFastRuntimeFactory(int numthreads, SAMFileHeader head){
         threads = numthreads;
@@ -75,7 +76,7 @@ public class MrsFastRuntimeFactory{
                 bamfiles.put(rg, Paths.get(outbase).toAbsolutePath().toString() + "." + rg + ".bam");
                 //ex.submit(r);
             } catch (InterruptedException | ExecutionException ex1) {
-                Logger.getLogger(MrsFastRuntimeFactory.class.getName()).log(Level.SEVERE, null, ex1);
+                log.log(Level.SEVERE, "[MRSFASTFACT] Error with MrsFAST runtime bam creation!", ex1);
             }
         }
         
@@ -125,7 +126,7 @@ public class MrsFastRuntimeFactory{
                 }
                 bam.close();
             }catch(IOException ex){
-                ex.printStackTrace();
+                log.log(Level.SEVERE, "[MRSFASTFACT] Error creating MrsFAST split BAM files!", ex);
             }
         };
         return r;

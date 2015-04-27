@@ -43,8 +43,10 @@ public class MrsFastExecutable implements Callable<String>{
         // Treat the versions of MrsFAST differently
         if(isUltra){
             String threads = System.getProperty("java.util.concurrent.ForkJoinPool.common.parallelism");
+            log.log(Level.FINE, "[MRSFASTEXE] Running ultra parameters on " + rg);
             pb = new ProcessBuilder("mrsfast", "--search", reference, "--threads", threads, "--mem", "4", "--seq", fastq, "-o", sam);
         }else{
+            log.log(Level.FINE, "[MRSFASTEXE] Running normal parameters on " + rg);
             pb = new ProcessBuilder("mrsfast", "--search", reference, "--seq", fastq, "-o", sam);
         }
         pb.redirectErrorStream(true);
@@ -63,11 +65,11 @@ public class MrsFastExecutable implements Callable<String>{
                         log.log(Level.INFO, rg + "> " + line);
                     }
                 } catch (IOException ex) {            
-                    log.log(Level.SEVERE, "[MRSFASTEX] Issue with output!", ex);
+                    log.log(Level.SEVERE, "[MRSFASTEX] Issue with STDIN stream!", ex);
                 }
                 //out.close();
             }catch(IOException ex){
-                ex.printStackTrace();
+                log.log(Level.SEVERE, "[MRSFASTEXE] Error with STDIN stream!", ex);
             }
         }).start();
         
@@ -81,19 +83,28 @@ public class MrsFastExecutable implements Callable<String>{
                     while((line = in.readLine()) != null){
                         //out.write(line);
                         //out.newLine();
-                        System.err.println(rg + "> " + line);
+                        log.log(Level.INFO, rg + "> " + line);
                     }
                 } catch (IOException ex) {            
-                    Logger.getLogger(MrsFastExecutable.class.getName()).log(Level.SEVERE, null, ex);
+                    log.log(Level.SEVERE, "[MRSFASTEXE] Error! Did not receive data from MrsFAST runtime process!", ex);
                 }
                 //out.close();
             }catch(IOException ex){
-                ex.printStackTrace();
+                log.log(Level.SEVERE, "[MRSFAST EXE] Error with STERR stream!", ex);
             }         
         }).start();
         
         p.waitFor();
         p.destroy();
+        
+        if(! Files.exists(Paths.get(sam))){
+            if(! Files.exists(Paths.get(fastq))){
+                throw new Exception("Error! Did not have access to fastq file: " + fastq + " and did not generate sam file: " + sam + " in MrsFAST runtime executable wrapper.");
+            }else{
+                throw new Exception("Error! Had access to fastq file: " + fastq + " but did not generate sam file: " + sam + " in MrsFAST runtime executable wrapper.");
+            }
+        }
+        
         Files.deleteIfExists(Paths.get(sam + ".nohit"));
         return sam;
     }
@@ -107,24 +118,28 @@ public class MrsFastExecutable implements Callable<String>{
             BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
             String line;
             line = in.readLine();
-            if(line == null)
-                throw new Exception("Could not find MrsFAST in system path! Please download and install MrsFAST!");
-            if(line.matches("^2\\..+")){
-                System.out.println("[MRSFAST EXE] Found MrsFAST version: " + line + " in system path");
-                return false;
-            }else if(line.matches("Version: 3\\..+")){
-                String[] token = line.split("\\s");
-                System.out.println("[MRSFAST EXE] Found MrsFAST version: " + token[1] + " in system path");
-                return true;
-            }
+            
             if(p.isAlive())
                 p.destroyForcibly();
             p.waitFor();
+            if(line == null)
+                throw new Exception("Could not find MrsFAST in system path! Please download and install MrsFAST!");
+            if(line.matches("^2\\..+")){
+                log.log(Level.INFO, "[MRSFAST EXE] Found MrsFAST version: " + line + " in system path");
+                return false;
+            }else if(line.matches("Version: 3\\..+")){
+                String[] token = line.split("\\s");
+                log.log(Level.INFO, "[MRSFAST EXE] Found MrsFAST version: " + token[1] + " in system path");
+                return true;
+            }else{
+                throw new Exception("Could not determine version from MrsFAST execution! Do you have MrsFAST installed in your PATH?");
+            }
+            
             
         } catch (IOException ex) {
-            Logger.getLogger(MrsFastExecutable.class.getName()).log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, "[MRSFASTEXE] Error! Could not invoke MrsFAST to check version!", ex);
         } catch(Exception ex){
-            Logger.getLogger(MrsFastExecutable.class.getName()).log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, "[MRSFASTEXE] Error! General issue with MrsFAST version checking!", ex);
         }   
         
         return false;
