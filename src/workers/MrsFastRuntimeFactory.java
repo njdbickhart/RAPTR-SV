@@ -75,8 +75,11 @@ public class MrsFastRuntimeFactory{
                 // This logic should give the absolute path name when creating the flatfile
                 bamfiles.put(rg, Paths.get(outbase).toAbsolutePath().toString() + "." + rg + ".bam");
                 //ex.submit(r);
-            } catch (InterruptedException | ExecutionException ex1) {
+            } catch (InterruptedException ex1) {
                 log.log(Level.SEVERE, "[MRSFASTFACT] Error with MrsFAST runtime bam creation!", ex1);
+            } catch (ExecutionException ex2){
+                log.log(Level.SEVERE, ex2.getCause().getMessage(), ex2.getCause());
+                log.log(Level.SEVERE, ex2.getMessage(), ex2);
             }
         }
         
