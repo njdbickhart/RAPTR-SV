@@ -42,9 +42,10 @@ public class MrsFastExecutable implements Callable<String>{
         
         // Treat the versions of MrsFAST differently
         if(isUltra){
-            String threads = System.getProperty("java.util.concurrent.ForkJoinPool.common.parallelism");
+            //String threads = System.getProperty("java.util.concurrent.ForkJoinPool.common.parallelism");
+            //It didn't make sense to fork off Mrsfast runtimes with parallel mrsfast submission jobs!
             log.log(Level.FINE, "[MRSFASTEXE] Running ultra parameters on " + rg);
-            pb = new ProcessBuilder("mrsfast", "--search", reference, "--threads", threads, "--mem", "4", "--seq", fastq, "-o", sam);
+            pb = new ProcessBuilder("mrsfast", "--search", reference, "--threads", String.valueOf(2), "--mem", "4", "--seq", fastq, "-o", sam);
         }else{
             log.log(Level.FINE, "[MRSFASTEXE] Running normal parameters on " + rg);
             pb = new ProcessBuilder("mrsfast", "--search", reference, "--seq", fastq, "-o", sam);

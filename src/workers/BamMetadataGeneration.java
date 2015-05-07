@@ -137,7 +137,7 @@ public class BamMetadataGeneration {
         if(this.mostCommonReadLen == 0){
             int largest = 0;
             for(int len : readlens.keySet()){
-                if(readlens.get(len) > largest && len > 50){
+                if(readlens.get(len) > largest && len >= 50){
                     this.mostCommonReadLen = len;
                     largest = readlens.get(len);
                 }
