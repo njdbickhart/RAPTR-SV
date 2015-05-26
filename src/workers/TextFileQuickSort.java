@@ -44,6 +44,7 @@ public class TextFileQuickSort {
 	private String tempDirectory = "";
         private final String delimiter;
         private final int[] colOrder;
+        private boolean hasData = false;
         
         private static final Logger log = Logger.getLogger(TextFileQuickSort.class.getName());
         private Path tempFile;
@@ -92,18 +93,21 @@ public class TextFileQuickSort {
 		outputs.clear();
 		BufferedReader br = null;
 		List<String[]> lines = new ArrayList<>(maxChunkSize);
-                log.log(Level.INFO, "[TXTFILESORT] Beginning sort routine for: " + identifier);
+                log.log(Level.INFO, "[TXTFILESORT] Beginning sort routine for bin: " + identifier);
 		try{
 			br = new BufferedReader(new InputStreamReader(in));
 			String line = null;
 			int currChunkSize = 0;
 			while ((line = br.readLine() ) != null ){
+                                this.hasData = true;
 				lines.add(line.split("\t"));
 				currChunkSize += line.length() + 1;
 				if ( currChunkSize >= maxChunkSize ){
 					currChunkSize = 0;
 					Collections.sort(lines, sorter);
-					File file = new File(tempDirectory + "temp" + System.currentTimeMillis());
+                                        String tmpfile = tempDirectory + "temp" + System.currentTimeMillis();
+					File file = new File(tmpfile);
+                                        log.log(Level.FINE, "[TXTFILESORT] Created new chunk temp file: " + tmpfile + " for bin: " + identifier);
 					outputs.add(file);
 					writeOut(lines, new FileOutputStream(file));
 					lines.clear();
@@ -114,6 +118,7 @@ public class TextFileQuickSort {
 			File file = new File(tempDirectory + "temp" + System.currentTimeMillis());
 			outputs.add(file);
 			writeOut(lines, new FileOutputStream(file));
+                        log.log(Level.FINE, "[TXTFILESORT] Finished split chunk routine. Had files? " + this.hasData);
 			lines.clear();
 		}catch(IOException io){
 			log.log(Level.SEVERE, "[TXTFILESORT] Error reading from inputstream: " + in.toString(), io);
@@ -161,10 +166,11 @@ public class TextFileQuickSort {
 			writer = new BufferedWriter(new OutputStreamWriter(os));
 			for ( int i = 0; i < outputs.size(); i++ ){
 				BufferedReader reader = new BufferedReader(new FileReader(outputs.get(i)));
-				readers.add(reader);
+                                
 				String line = reader.readLine();
 				if ( line != null ){
-					map.put(new StringWrapper(line.split(delimiter), colOrder), readers.get(i));
+                                        readers.add(reader);
+					map.put(new StringWrapper(line.split(delimiter), colOrder), readers.get(readers.size() - 1));
 				}
 			}
 
@@ -188,7 +194,9 @@ public class TextFileQuickSort {
 			log.log(Level.SEVERE, "[TXTFILESORT] Error merging " + readers.size() + " files to: " + os.toString(), io);
 		}finally{
 			for ( int i = 0; i < readers.size(); i++ ){
-				try{readers.get(i).close();}catch(Exception e){}
+				try{readers.get(i).close();}catch(Exception e){
+                                    log.log(Level.SEVERE, "[TXTFILESORT] Could not close buffered reader merger: " + readers.get(i).toString());
+                                }
 			}
 			for ( int i = 0; i < outputs.size(); i++ ){
 				outputs.get(i).delete();
@@ -209,6 +217,8 @@ public class TextFileQuickSort {
         try {
                 this.tempFile = Files.createTempFile(path.toString(), "sort.tmp");
                 this.tempFile.toFile().deleteOnExit();
+                
+                log.log(Level.FINE, "[TXTFILESORT] Private temp file: " + this.tempFile.toString());
             } catch (IOException ex) {
                 Logger.getLogger(TempDataClass.class.getName()).log(Level.SEVERE, null, ex);
             }
