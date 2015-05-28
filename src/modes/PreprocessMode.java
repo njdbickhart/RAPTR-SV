@@ -180,16 +180,20 @@ public class PreprocessMode {
         log.log(Level.INFO, "[PREPROCESS] Generated initial split and divet data.");
         splits.keySet().stream().forEach((s) -> {
             try{
-                Files.deleteIfExists(Paths.get(splits.get(s).fq1File()));
-                log.log(Level.FINE, "[PREPROCESS] Deleting file: " + splits.get(s).fq1File().toString());
+                if(!this.debug){
+                    Files.deleteIfExists(Paths.get(splits.get(s).fq1File()));
+                    log.log(Level.FINE, "[PREPROCESS] Deleting file: " + splits.get(s).fq1File().toString());
+                }
             }catch(IOException ex){
                 log.log(Level.SEVERE, "[PREPROCESS] Could not delete file: " + splits.get(s).fq1File().toString(), ex);
             }
         });
         mfact.getSams().keySet().stream().forEach((s) -> {
             try{
-                Files.deleteIfExists(Paths.get(mfact.getSams().get(s)));
-                log.log(Level.FINE, "[PREPROCESS] Deleting file: " + mfact.getSams().get(s));
+                if(!this.debug){
+                    Files.deleteIfExists(Paths.get(mfact.getSams().get(s)));
+                    log.log(Level.FINE, "[PREPROCESS] Deleting file: " + mfact.getSams().get(s));
+                }
             }catch(IOException ex){
                 log.log(Level.SEVERE, "[PREPROCESS] Could not delete file: " + mfact.getSams().get(s), ex);
             }
