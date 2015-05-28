@@ -197,11 +197,17 @@ public class SamRecordMatcher extends TempDataClass {
         // I can do easy file concatenation with the files sorted in bins, as the read names will all be in the same files
         final Map<String, List<Path>> sortHolder = new ConcurrentHashMap<>();
         this.SamTemp.entrySet().stream().forEach((e) -> {
+            e.getValue().entrySet().stream().forEach((l) -> {
+                // Ensuring that all data is currently spilled to disk before sort routine.
+                l.getValue().dumpDataToDisk();
+            });
             if(!sortHolder.containsKey(e.getKey()))
                 sortHolder.put(e.getKey(), Collections.synchronizedList(new ArrayList<>()));
             e.getValue().entrySet().parallelStream().forEach((l) -> {
                 TextFileQuickSort t = new TextFileQuickSort("\t", new int[]{0,1}, this.tempOutBase);
                 try {
+                    if(!l.getValue().getTempFile().toFile().canRead())
+                        throw new FileNotFoundException("Error reading file!");
                     t.splitChunks(new FileInputStream(l.getValue().getTempFile().toFile()), String.valueOf(l.getKey()));
                     t.mergeChunks();
                 } catch (FileNotFoundException ex) {

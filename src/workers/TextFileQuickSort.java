@@ -115,7 +115,9 @@ public class TextFileQuickSort {
 			}
 			//write out the remaining chunk
 			Collections.sort(lines, sorter);
-			File file = new File(tempDirectory + "temp" + System.currentTimeMillis());
+                        String tmpfile = tempDirectory + "temp" + System.currentTimeMillis();
+			File file = new File(tmpfile);
+                        log.log(Level.FINE, "[TXTFILESORT] Created new chunk temp file: " + tmpfile + " for bin: " + identifier);
 			outputs.add(file);
 			writeOut(lines, new FileOutputStream(file));
                         log.log(Level.FINE, "[TXTFILESORT] Finished split chunk routine. Had files? " + this.hasData);
@@ -123,7 +125,9 @@ public class TextFileQuickSort {
 		}catch(IOException io){
 			log.log(Level.SEVERE, "[TXTFILESORT] Error reading from inputstream: " + in.toString(), io);
 		}finally{
-			if ( br != null )try{br.close();}catch(Exception e){}
+			if ( br != null )try{br.close();}catch(Exception e){
+                            log.log(Level.SEVERE, "[TXTFILESORT] Error closing inputstream: " + in.toString(), e);
+                        }
 		}
 	}
 
@@ -146,7 +150,9 @@ public class TextFileQuickSort {
 			log.log(Level.SEVERE, "[TXTFILESORT] Error writing to outputstream: " + os.toString(), io);
 		}finally{
 			if ( writer != null ){
-				try{writer.close();}catch(Exception e){}
+				try{writer.close();}catch(Exception e){
+                                    log.log(Level.SEVERE, "[TXTFILESORT] Error closing output stream!", e);
+                                }
 			}
 		}
 	}
@@ -201,7 +207,9 @@ public class TextFileQuickSort {
 			for ( int i = 0; i < outputs.size(); i++ ){
 				outputs.get(i).delete();
 			}
-			try{writer.close();}catch(Exception e){}
+			try{writer.close();}catch(Exception e){
+                            log.log(Level.SEVERE, "[TXTFILESORT] Erorr closing merge output writer!", e);
+                        }
 		}
                 os.close();
 	}
