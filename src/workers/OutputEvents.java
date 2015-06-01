@@ -27,6 +27,8 @@ public class OutputEvents {
     protected Path supportfile;
     protected final boolean debug;
     
+    private static final Logger log = Logger.getLogger(OutputEvents.class.getName());
+    
     public OutputEvents(String outfile, boolean debug){
         //this.sets = (ArrayList<finalSets>) sets;
         this.outfile = Paths.get(outfile);
@@ -37,14 +39,16 @@ public class OutputEvents {
             try {
                 this.outfile.toFile().createNewFile();
             } catch (IOException ex) {
-                Logger.getLogger(OutputEvents.class.getName()).log(Level.SEVERE, null, ex);
+                log.log(Level.SEVERE, "[OUTPUTEVENTS] Could not create new output file: " + outfile, ex);
+                System.exit(-1);
             }
         else{
             this.outfile.toFile().delete();
             try {
                 this.outfile.toFile().createNewFile();
             } catch (IOException ex) {
-                Logger.getLogger(OutputEvents.class.getName()).log(Level.SEVERE, null, ex);
+                log.log(Level.SEVERE, "[OUTPUTEVENTS] Could not overwrite existing output file: " + outfile, ex);
+                System.exit(-1);
             }
         }
     }
@@ -72,7 +76,7 @@ public class OutputEvents {
                 //output.newLine();
             }
         } catch (IOException ex) {
-            Logger.getLogger(OutputEvents.class.getName()).log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, "[OUTPUTEVENTS] Could not write to outfile: " + this.outfile.toString(), ex);
         }
         
         if(debug){
@@ -83,7 +87,7 @@ public class OutputEvents {
                     support.newLine();
                 }
             }catch(IOException ex){
-                Logger.getLogger(OutputEvents.class.getName()).log(Level.SEVERE, null, ex);
+                log.log(Level.SEVERE, "[OUTPUTEVENTS] Could not write to supportfile: " + this.supportfile.toString(), ex);
             }
         }
     }

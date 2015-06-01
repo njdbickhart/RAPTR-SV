@@ -244,6 +244,7 @@ public class BufferedSetReader {
         this.hardUnbal = 0;
         
         try(SAMFileReader samReader = new SAMFileReader(file.getSplitsam().toFile())){
+            samReader.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
             SAMRecordIterator iterator = samReader.iterator();
             while(iterator.hasNext()){
                 SAMRecord line = iterator.next();
