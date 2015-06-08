@@ -6,7 +6,6 @@
 
 package dataStructs;
 
-import SetUtils.SortSetToList;
 import TempFiles.TempDataClass;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -19,15 +18,11 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -42,7 +37,6 @@ import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordIterator;
 import net.sf.samtools.TextCigarCodec;
 import stats.ReadNameUtility;
-import utils.SortByChr;
 import workers.TextFileQuickSort;
 
 /**
@@ -68,6 +62,14 @@ public class SamRecordMatcher extends TempDataClass {
     
     private static final Logger log = Logger.getLogger(SamRecordMatcher.class.getName());
     
+    /**
+     * Creates a factory that processes sam entries for discordant and split reads.
+     * @param threshold The number of alignments to save in memory before spilling to disk
+     * @param checkRGs true if the user wants the samheader read groups treated separately
+     * @param tmpoutname The base temporary file output name
+     * @param thresholds Obtained from the BamMetadataGeneration class -- [0] = lower insert size threshold [1] = upper insert size threshold
+     * @param debug true if debug "samsupport.tab" file should be generated 
+     */
     public SamRecordMatcher(int threshold, boolean checkRGs, String tmpoutname, Map<String, Integer[]> thresholds, boolean debug){
         this.threshold = threshold;
         this.checkRGs = checkRGs;
@@ -85,6 +87,10 @@ public class SamRecordMatcher extends TempDataClass {
         this.tempOutBase = tmpoutname;
     }
     
+    /**
+     * Buffered method for adding SAMRecords for processing. Will spill to disk automatically when threshold is reached.
+     * @param a a SAMRecord object
+     */
     public void bufferedAdd(SAMRecord a) {
         // Check if we should add this one
         // We want to avoid optical duplicates and otherwise marked "bad" reads
@@ -146,11 +152,17 @@ public class SamRecordMatcher extends TempDataClass {
         return hash >> 60;
     }
     
+    /**
+     * Part of interface. Ignored in this iteration.
+     */
     @Override
     public void readSequentialFile() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
+    /**
+     * Automatically spills all reads to disk from buffer.
+     */
     @Override
     public void dumpDataToDisk() {
         this.openTemp('A');
@@ -173,6 +185,10 @@ public class SamRecordMatcher extends TempDataClass {
         this.buffer.clear();
     }
     
+    /**
+     * Method that merges several child SamRecordMatcher objects with a parent object.
+     * @param s SamRecordMatcher class
+     */
     public synchronized void combineRecordMatcher(SamRecordMatcher s){
         s.SamTemp.keySet().forEach((k) -> {
             if(!this.SamTemp.containsKey(k)){
@@ -190,6 +206,11 @@ public class SamRecordMatcher extends TempDataClass {
         });
     }
     
+    /**
+     * Main routine that takes all identified discordant alignments and ships them to appropriate temp output handles. 
+     * @param divets the temporary discordant read output handle
+     * @param splits the temporary split read output handle
+     */
     public void convertToVariant(Map<String, DivetOutputHandle> divets, Map<String, SplitOutputHandle> splits){
         if(!this.buffer.isEmpty())
             this.dumpDataToDisk();
@@ -349,7 +370,11 @@ public class SamRecordMatcher extends TempDataClass {
         
         int splitTrims = splits.getTrims();
         int splitDiscards = splits.getDiscards();
+        int splitErrors = splits.getErrors();
         log.log(Level.INFO, "[SAMMATCH] While creating split reads, discarded: " + splitDiscards + " small reads and trimmed: " + splitTrims + " long reads out of: " + splits.getTotalSplits() + " total viable split reads.");
+        if(splitErrors > 0){
+            log.log(Level.INFO, "[SAMMATCH] Warning! Found " + splitErrors + " alignments with mismatching quality score and sequence lengths!");
+        }
         
         divets.CloseHandle();
         splits.CloseFQHandle();
@@ -437,6 +462,12 @@ public class SamRecordMatcher extends TempDataClass {
         sort.getOutputStream().close();
     }
     
+    /**
+     * This is a recursive iteration over the bam file to grab anchor reads that were not associated with split reads the first time. Could
+     * be avoided if the 0x8 flag was set on the parent anchor read (you can pull them out in the first pass)
+     * @param splits the temp split output handle
+     * @param samItr a samjdk iterator over the input bam file.
+     */
     public void RetrieveMissingAnchors(Map<String, SplitOutputHandle> splits, SAMRecordIterator samItr){
         if(!this.anchorlookup.isEmpty()){
             int anchorcount = this.anchorlookup.keySet().stream().map((s) -> anchorlookup.get(s).keySet().size()).reduce(0,Integer::sum);
@@ -555,10 +586,9 @@ public class SamRecordMatcher extends TempDataClass {
     private boolean isSplit(String[] segs){
         int fflags = Integer.parseInt(segs[3]);
         Cigar c = TextCigarCodec.getSingleton().decode(segs[7]);
-        return (
-                ((fflags & 0x4) == 0x4 && (fflags & 0x8) != 0x8 && (fflags & 0x100) != 0x100) 
-                || (isOverSoftClipThreshold(c, segs[11].length()) && (fflags & 0x100) != 0x100)
-                );
+        boolean segmentUnmapped = (fflags & 0x4) == 0x4 && (fflags & 0x8) != 0x8 && (fflags & 0x100) != 0x100;
+        boolean softclipThresh = isOverSoftClipThreshold(c, segs[11].length()) && (fflags & 0x100) != 0x100;
+        return segmentUnmapped || softclipThresh;
     }
     
     private boolean isAnchor(String[] segs){

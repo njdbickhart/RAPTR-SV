@@ -41,11 +41,19 @@ public class SplitOutputHandle {
     private final TextCigarCodec cd = TextCigarCodec.getSingleton();
     private final int splitreadlen;
     private AtomicInteger discardCounter = new AtomicInteger(0);
+    private AtomicInteger errorCounter = new AtomicInteger(0);
     private AtomicInteger trimCounter = new AtomicInteger(0);
     private AtomicInteger totalSplits = new AtomicInteger(0);
     
     private static final Logger log = Logger.getLogger(SplitOutputHandle.class.getName());
     
+    /**
+     * This class generates the temporary output file handle for split read generation
+     * @param file The temporary fq file for alignment
+     * @param file2 The output handle for the anchoring reads
+     * @param sam A Samheader class object
+     * @param readlen The read length chosen for read trimming
+     */
     public SplitOutputHandle(String file, String file2, SAMFileHeader sam, int readlen){
         fq1path = Paths.get(file);
         anchorpath = Paths.get(file2);
@@ -60,6 +68,10 @@ public class SplitOutputHandle {
         //TODO: make this a buffer in order and close file handles in an orderly fashion
     }
     
+    /**
+     * This adds an anchor to the temp anchor file
+     * @param segs String representation of a SAM record
+     */
     public synchronized void AddAnchor(String[] segs){
         if(!fileopen)
             this.OpenAnchorHandle();
@@ -100,18 +112,27 @@ public class SplitOutputHandle {
         anchorOut.addAlignment(sam);
     }
     
+    /**
+     * This adds an anchor to the temp anchor file
+     * @param s A SAMRecord object
+     */
     public synchronized void AddAnchor(SAMRecord s){
         if(!fileopen)
             this.OpenAnchorHandle();
         anchorOut.addAlignment(s);
     }
     
+    /**
+     * This adds an alignment to the split read temporary file output
+     * @param segs String representation of a temporary SAMRecord object (first two columns have the bin and RG ids)
+     */
     public synchronized void AddSplit(String[] segs){
         if(!fileopen)
             this.OpenFQHandle();
         String nl = System.lineSeparator();
         String rn1 = "@" + segs[2] + "_1";
         String rn2 = "@" + segs[2] + "_2";
+        
         
         int len = segs[11].length();
         //int splitter = firstSplitSeg(segs[8], len);
@@ -125,7 +146,11 @@ public class SplitOutputHandle {
         
         String tS1, tS2, tQ1, tQ2;
         
-        if(splitter < this.splitreadlen){
+        if(segs[11].length() != segs[12].length()){
+            // This was a malformed read and should be counted as an error
+            this.errorCounter.getAndIncrement();
+            return;
+        }else if(splitter < this.splitreadlen){
             // This read is far too small, and should be discarded
             this.discardCounter.incrementAndGet();
             return;
@@ -175,15 +200,21 @@ public class SplitOutputHandle {
         return readlen / 2; // We couldn't find a good softclip, so let's just return half the read length
     }
     
+    /**
+     * Opens the temp FQ handle file for writing. 
+     */
     public void OpenFQHandle(){
         try{
             fq1 = Files.newBufferedWriter(fq1path, Charset.defaultCharset());
         }catch(IOException ex){
-            log.log(Level.SEVERE, "[SPLITOUT] Error opening FQ handle!");
+            log.log(Level.SEVERE, "[SPLITOUT] Error opening FQ handle!", ex);
         }
         //fileopen = true;
     }
     
+    /**
+     * Closes the temp FQ handle.
+     */
     public void CloseFQHandle(){
         try{           
             fq1.close();
@@ -193,11 +224,17 @@ public class SplitOutputHandle {
         //fileopen = false;
     }
     
+    /**
+     * Opens the temp Anchor handle file for writing.
+     */
     public void OpenAnchorHandle(){
         anchorOut = anchor.makeBAMWriter(header, false, anchorpath.toFile());
         fileopen = true;
     }
     
+    /**
+     * Closes the temp Anchor handle file for writing.
+     */
     public void CloseAnchorHandle(){
         
         if(fileopen){
@@ -206,26 +243,58 @@ public class SplitOutputHandle {
         fileopen = false;
     }
         
+    /**
+     * Checks if the temporary files are open for writing.
+     * @return true if the handles are open. 
+     */
     public boolean fileIsOpen(){
         return fileopen;
     }
     
+    /**
+     * 
+     * @return returns the absolute path of the temp FQ file
+     */
     public String fq1File(){
         return this.fq1path.toString();
     }
     
+    /**
+     *
+     * @return returns the absolute path of the temp Anchor file
+     */
     public String getAnchorFileStr(){
         return this.anchorpath.toAbsolutePath().toString();
     }
     
+    /**
+     *
+     * @return returns the count of split reads that were too short for processing
+     */
     public int getDiscards(){
         return this.discardCounter.intValue();
     }
     
+    /**
+     *
+     * @return returns the count of split reads that were too long and were trimmed.
+     */
     public int getTrims(){
         return this.trimCounter.intValue();
     }
     
+    /**
+     *
+     * @return returns the number of malformed sam record entries
+     */
+    public int getErrors(){
+        return this.errorCounter.intValue();
+    }
+    
+    /**
+     *
+     * @return returns the total number of processed (trimmed and normal) split reads.
+     */
     public int getTotalSplits(){
         return this.totalSplits.intValue();
     }
