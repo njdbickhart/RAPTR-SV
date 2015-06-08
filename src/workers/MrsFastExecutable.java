@@ -55,22 +55,27 @@ public class MrsFastExecutable implements Callable<String>{
         final Process p = pb.start();
         // input stream thread
         new Thread( () -> {
-            try(final BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()))){
+            try{
                 //final BufferedWriter out = Files.newBufferedWriter(Paths.get("Mrsfastoutputstream." + fastq + ".out"), Charset.defaultCharset());
-            
+                final BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
                 String line;
                 try {
                     while((line = in.readLine()) != null){
                         //out.write(line);
                         //out.newLine();
                         log.log(Level.INFO, rg + "> " + line);
+                        
                     }
                 } catch (IOException ex) {            
                     log.log(Level.SEVERE, "[MRSFASTEX] Issue with STDIN stream!", ex);
+                }finally{
+                    if(in != null){
+                        in.close();
+                    }
                 }
                 //out.close();
-            }catch(IOException ex){
-                log.log(Level.SEVERE, "[MRSFASTEXE] Error with STDIN stream!", ex);
+            }catch(Exception ex){
+                log.log(Level.SEVERE, "[MRSFASTEXE] Uknown exception with STDIN stream!", ex);
             }
         }).start();
         

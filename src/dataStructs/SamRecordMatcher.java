@@ -584,7 +584,12 @@ public class SamRecordMatcher extends TempDataClass {
     
     // TODO: instead of ignoring secondary aligments (0x100) try to generate split alignments from them
     private boolean isSplit(String[] segs){
-        int fflags = Integer.parseInt(segs[3]);
+        int fflags  = 0;
+        try{
+            fflags = Integer.parseInt(segs[3]);
+        }catch(NumberFormatException ex){
+            log.log(Level.SEVERE, "[SAMMATCH] Is split generated error with faulty alignment: " + StrUtils.StrArray.Join(segs, "\t"), ex);
+        }
         Cigar c = TextCigarCodec.getSingleton().decode(segs[7]);
         boolean segmentUnmapped = (fflags & 0x4) == 0x4 && (fflags & 0x8) != 0x8 && (fflags & 0x100) != 0x100;
         boolean softclipThresh = isOverSoftClipThreshold(c, segs[11].length()) && (fflags & 0x100) != 0x100;
