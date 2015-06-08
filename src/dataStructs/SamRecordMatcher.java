@@ -177,6 +177,7 @@ public class SamRecordMatcher extends TempDataClass {
                     }
                 }
             }
+            this.output.flush();
         }catch(IOException ex){
             ex.printStackTrace();
         }finally{
@@ -526,15 +527,17 @@ public class SamRecordMatcher extends TempDataClass {
             this.createTemp(tmpdir);
         } 
         
-        public void ConcatenateFiles(List<Path> files){
+        public synchronized void ConcatenateFiles(List<Path> files){
             this.openTemp('W');
             for(Path p : files){
                 try(BufferedReader in = Files.newBufferedReader(p, Charset.defaultCharset())){
                     String line;
                     while((line = in.readLine()) != null){
+                        line = line.trim();
                         this.output.write(line);
                         this.output.write(System.lineSeparator());
                     }
+                    this.output.flush();
                     p.toFile().delete();
                 }catch(IOException ex){
                     log.log(Level.SEVERE, "[TEMPSORTMERGE] Error merging files: " + files.toString(), ex);
@@ -588,9 +591,14 @@ public class SamRecordMatcher extends TempDataClass {
         try{
             fflags = Integer.parseInt(segs[3]);
         }catch(NumberFormatException ex){
-            log.log(Level.SEVERE, "[SAMMATCH] Is split generated error with faulty alignment: " + StrUtils.StrArray.Join(segs, "\t"), ex);
+            log.log(Level.SEVERE, "[SAMMATCH] Issplit generated error with faulty alignment: " + StrUtils.StrArray.Join(segs, "\t"), ex);
         }
-        Cigar c = TextCigarCodec.getSingleton().decode(segs[7]);
+        Cigar c = null;
+        try{
+            c = TextCigarCodec.getSingleton().decode(segs[7]);
+        }catch(Exception ex){
+            log.log(Level.SEVERE, "[SAMMATCH] Issplit generated error with faulty alignment: " + StrUtils.StrArray.Join(segs, "\t"), ex);
+        }
         boolean segmentUnmapped = (fflags & 0x4) == 0x4 && (fflags & 0x8) != 0x8 && (fflags & 0x100) != 0x100;
         boolean softclipThresh = isOverSoftClipThreshold(c, segs[11].length()) && (fflags & 0x100) != 0x100;
         return segmentUnmapped || softclipThresh;

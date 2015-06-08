@@ -105,7 +105,8 @@ public class TextFileQuickSort {
 				if ( currChunkSize >= maxChunkSize ){
 					currChunkSize = 0;
 					Collections.sort(lines, sorter);
-                                        String tmpfile = tempDirectory + "temp" + System.currentTimeMillis();
+                                        double rand = Math.random();
+                                        String tmpfile = tempDirectory + "temp" + System.currentTimeMillis() + "." + rand;
 					File file = new File(tmpfile);
                                         log.log(Level.FINE, "[TXTFILESORT] Created new chunk temp file: " + tmpfile + " for bin: " + identifier);
 					outputs.add(file);
@@ -115,7 +116,8 @@ public class TextFileQuickSort {
 			}
 			//write out the remaining chunk
 			Collections.sort(lines, sorter);
-                        String tmpfile = tempDirectory + "temp" + System.currentTimeMillis();
+                        double rand = Math.random();
+                        String tmpfile = tempDirectory + "temp" + System.currentTimeMillis() + "." + rand;
 			File file = new File(tmpfile);
                         log.log(Level.FINE, "[TXTFILESORT] Created new chunk temp file: " + tmpfile + " for bin: " + identifier);
 			outputs.add(file);
@@ -185,8 +187,10 @@ public class TextFileQuickSort {
 			while ( map.size() > 0 ){
 				Collections.sort(sorted);
 				StringWrapper line = sorted.remove(0);
-				writer.write(StrArray.Join(line.string, delimiter));
-				writer.write("\n");
+                                
+                                String outstr = StrArray.Join(line.string, delimiter);
+				writer.write(outstr);
+				writer.write(System.lineSeparator());
 				BufferedReader reader = map.remove(line);
 				String nextLine = reader.readLine();
 				if ( nextLine != null ){
