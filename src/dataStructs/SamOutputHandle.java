@@ -62,6 +62,7 @@ public class SamOutputHandle extends TempDataClass{
                 this.output.write(line);
                 this.output.newLine();
             }
+            this.output.flush();
             this.closeTemp('A');
         }catch(IOException ex){
             ex.printStackTrace();
@@ -75,7 +76,7 @@ public class SamOutputHandle extends TempDataClass{
     }
 
     @Override
-    public void dumpDataToDisk() {
+    public synchronized void dumpDataToDisk() {
         this.openTemp('A');
         try{
             for(Long clone : buffer.keySet()){
@@ -86,7 +87,7 @@ public class SamOutputHandle extends TempDataClass{
                     }
                 }
             }
-            
+            this.output.flush();
         }catch(IOException ex){
             ex.printStackTrace();
         }finally{

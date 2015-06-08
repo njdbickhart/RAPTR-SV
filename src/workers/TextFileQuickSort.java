@@ -195,7 +195,7 @@ public class TextFileQuickSort {
 					sorted.add(sw);
 				}
 			}
-			
+			writer.flush();
 		}catch(IOException io){
 			log.log(Level.SEVERE, "[TXTFILESORT] Error merging " + readers.size() + " files to: " + os.toString(), io);
 		}finally{
@@ -207,6 +207,7 @@ public class TextFileQuickSort {
 			for ( int i = 0; i < outputs.size(); i++ ){
 				outputs.get(i).delete();
 			}
+                        
 			try{writer.close();}catch(Exception e){
                             log.log(Level.SEVERE, "[TXTFILESORT] Erorr closing merge output writer!", e);
                         }
