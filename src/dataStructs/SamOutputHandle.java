@@ -58,7 +58,7 @@ public class SamOutputHandle extends TempDataClass{
             while((line = input.readLine()) != null){
                 line = line.trim();
                 
-                String[] segs = line.split("\t");
+                //String[] segs = line.split("\t");
                 this.output.write(line);
                 this.output.newLine();
             }
