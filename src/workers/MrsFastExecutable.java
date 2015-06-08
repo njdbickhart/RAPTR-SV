@@ -64,9 +64,7 @@ public class MrsFastExecutable implements Callable<String>{
                         //out.write(line);
                         //out.newLine();
                         log.log(Level.INFO, rg + "> " + line);
-                        if(p.getInputStream().available() == 0){
-                            break;
-                        }
+                        
                     }
                 } catch (IOException ex) {            
                     log.log(Level.SEVERE, "[MRSFASTEX] Issue with STDIN stream!", ex);

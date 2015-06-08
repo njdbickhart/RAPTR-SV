@@ -38,6 +38,9 @@ public class RPSRmain {
         boolean debug = cmd.GetValue("debug").equals("true");
         setFileHandler(cmd.CurrentMode, args, debug);
         log.log(Level.INFO, "[MAIN] RAPTR-SV version: " + version);
+        String workingDir = System.getProperty("user.dir");
+        log.log(Level.FINE, "[MAIN] Current working directory: " + workingDir);
+        System.setProperty("java.io.tmpdir", workingDir);
         
         if(cmd.HasOpt("p")){
             System.setProperty("java.io.tmpdir", cmd.GetValue("p"));
