@@ -24,7 +24,7 @@ import stats.LogFormat;
  * @author bickhart
  */
 public class RPSRmain {
-    private static final String version = "0.0.15";
+    private static final String version = "0.0.16";
     private static final Logger log = Logger.getLogger(RPSRmain.class.getName());
     /**
      * @param args the command line arguments

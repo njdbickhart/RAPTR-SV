@@ -111,7 +111,7 @@ public class PreprocessMode {
         
         List<SamRecordMatcher> collect = coords.parallelStream()
             .map((b) -> {
-                SamRecordMatcher w = new SamRecordMatcher(samplimit / 1000, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
+                SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
                 try{
                     SAMFileReader temp = new SAMFileReader(new File(input));
                     temp.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
@@ -126,12 +126,13 @@ public class PreprocessMode {
                     log.log(Level.SEVERE, "[SAMRECORD] Error with SAM chunk: " + b.Chr() + "\t" + b.Start() + "\t" + b.End());
                     ex.printStackTrace();
                 }
+                w.dumpDataToDisk();
                 return w;
             }).collect(Collectors.toList());
                 //.reduce(new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug), (SamRecordMatcher a, SamRecordMatcher b) -> {a.combineRecordMatcher(b); return a;});
         
         
-        SamRecordMatcher worker = new SamRecordMatcher(samplimit / 1000, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
+        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
         collect.stream().forEachOrdered((s) -> {
             worker.combineRecordMatcher(s);
         });

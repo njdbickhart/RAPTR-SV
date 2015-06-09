@@ -161,29 +161,16 @@ public class SamRecordMatcher extends TempDataClass {
     }
 
     /**
-     * Automatically spills all reads to disk from buffer.
+     * Automatically spills all reads from SamOutputHandle files to disk for later retrieval
      */
     @Override
     public void dumpDataToDisk() {
-        this.openTemp('A');
-        try{
-            for(SAMReadGroupRecord r : buffer.keySet()){
-                for(String clone : buffer.get(r).keySet()){
-                    for(short num : buffer.get(r).get(clone).keySet()){
-                        for(SAMRecord sam : buffer.get(r).get(clone).get(num)){
-                            this.output.write(r.getId() + "\t" + clone + "\t" + num + "\t" + sam.getSAMString());
-                            //this.output.newLine();
-                        }
-                    }
-                }
-            }
-            this.output.flush();
-        }catch(IOException ex){
-            ex.printStackTrace();
-        }finally{
-            this.closeTemp('A');
-        }
-        this.buffer.clear();
+        this.SamTemp.entrySet().stream().forEach((e) -> {
+            e.getValue().entrySet().stream().forEach((l) -> {
+                // Ensuring that all data is currently spilled to disk before sort routine.
+                l.getValue().dumpDataToDisk();
+            });
+        });
     }
     
     /**
