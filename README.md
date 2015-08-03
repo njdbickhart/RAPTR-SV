@@ -71,6 +71,7 @@ RAPTR-SV will generate four files for each read group of the bam that you "prepr
 
 Please note that the "flat file" (*.flat) is the input for the RAPTR-SV "cluster" mode which will make insertion, deletion and tandem duplication calls on your data. If you have multiple bam files for the same sample, you can "preprocess" each bam individually and then concatenate the "flat files" together before running the entire dataset through RAPTR-SV "cluster" mode.
 
+If you run RAPTR-SV with the "-d" flag, it will generate a "Samsupport.tab" file that contains all of the discordant reads in the BAM file. This is simply for debugging purposes, and this file can be safely deleted after running the program.
 ##### cluster
 This is the mode that uses metadata generated in the preprocess stage of the pipeline to call variants. There are several runtime filter settings that can be set to reduce the number of false positive calls, though in most cases, you can run the program with the default settings.
 

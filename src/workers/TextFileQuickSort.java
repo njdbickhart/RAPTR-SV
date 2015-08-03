@@ -41,7 +41,7 @@ public class TextFileQuickSort {
         private final Comparator<String[]> sorter;
 	private int maxChunkSize = 100000000;
 	private List<File> outputs = new ArrayList<>();
-	private String tempDirectory = "";
+	private String tempDirectory = System.getProperty("java.io.tmpdir");
         private final String delimiter;
         private final int[] colOrder;
         private boolean hasData = false;
@@ -106,7 +106,7 @@ public class TextFileQuickSort {
 					currChunkSize = 0;
 					Collections.sort(lines, sorter);
                                         double rand = Math.random();
-                                        String tmpfile = tempDirectory + "temp" + System.currentTimeMillis() + "." + rand;
+                                        String tmpfile = tempDirectory + "tempsplit" + System.currentTimeMillis() + "." + rand;
 					File file = new File(tmpfile);
                                         log.log(Level.FINE, "[TXTFILESORT] Created new chunk temp file: " + tmpfile + " for bin: " + identifier);
 					outputs.add(file);
@@ -117,7 +117,7 @@ public class TextFileQuickSort {
 			//write out the remaining chunk
 			Collections.sort(lines, sorter);
                         double rand = Math.random();
-                        String tmpfile = tempDirectory + "temp" + System.currentTimeMillis() + "." + rand;
+                        String tmpfile = tempDirectory + "tempsplit" + System.currentTimeMillis() + "." + rand;
 			File file = new File(tmpfile);
                         log.log(Level.FINE, "[TXTFILESORT] Created new chunk temp file: " + tmpfile + " for bin: " + identifier);
 			outputs.add(file);
