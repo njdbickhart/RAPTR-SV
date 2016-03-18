@@ -8,6 +8,9 @@ package modes;
 
 import GetCmdOpt.SimpleModeCmdLineParser;
 import StrUtils.StrArray;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -21,7 +24,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import net.sf.samtools.SAMFileReader;
 import setWeightCover.weightCoverEvents;
 import workers.BufferedSetReader;
 import workers.FlatFile;
@@ -162,7 +164,7 @@ public class ClusterMode {
     }
     
     private List<String> getChrsFromBam(File sam){
-        SAMFileReader samr = new SAMFileReader(sam);
+        SamReader samr = SamReaderFactory.makeDefault().open(sam);
         log.log(Level.FINE, "[CLUSTER] extracting chromosomes from bam header: " + sam.toString());
         List<String> headers = samr.getFileHeader()
                 .getSequenceDictionary()

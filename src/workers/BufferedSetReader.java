@@ -12,7 +12,14 @@ import dataStructs.readEnum;
 import dataStructs.readNameMappings;
 import dataStructs.splitRead;
 import gziputils.ReaderReturn;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordIterator;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.ValidationStringency;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,9 +27,6 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMRecordIterator;
 import setWeightCover.BufferedInitialSet;
 import stats.GapOverlap;
 import stats.ReadNameUtility;
@@ -198,8 +202,9 @@ public class BufferedSetReader {
     private HashMap<String, ArrayList<anchorRead>> populateAnchors(FlatFile file){
         HashMap<String, ArrayList<anchorRead>> anchors = new HashMap<>();
         //BufferedReader anchorReader = ReaderReturn.openFile(file.getAnchor().toFile());
-        SAMFileReader sam = new SAMFileReader(file.getAnchor().toFile());
-        sam.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        SamReader sam = SamReaderFactory.makeDefault()
+                .validationStringency(ValidationStringency.LENIENT)
+                .open(file.getAnchor().toFile());
         //try{
             //String line;
             SAMRecordIterator itr = sam.iterator();
@@ -243,8 +248,9 @@ public class BufferedSetReader {
         this.hardBal = 0;
         this.hardUnbal = 0;
         
-        try(SAMFileReader samReader = new SAMFileReader(file.getSplitsam().toFile())){
-            samReader.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        try(SamReader samReader = SamReaderFactory.makeDefault()
+                .validationStringency(ValidationStringency.LENIENT)
+                .open(file.getSplitsam().toFile());){
             SAMRecordIterator iterator = samReader.iterator();
             while(iterator.hasNext()){
                 SAMRecord line = iterator.next();

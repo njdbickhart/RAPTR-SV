@@ -9,7 +9,17 @@ package workers;
 import StrUtils.StrArray;
 import dataStructs.DivetOutputHandle;
 import dataStructs.SplitOutputHandle;
+import htsjdk.samtools.BAMIndexer;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMReadGroupRecord;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordIterator;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.ValidationStringency;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,12 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import net.sf.samtools.BAMIndexer;
-import net.sf.samtools.SAMFileHeader;
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMReadGroupRecord;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMRecordIterator;
 
 /**
  *
@@ -71,20 +75,27 @@ public class BamMetadataGeneration {
      * to sample statistics from. Higher limits require more memory.
      */
     public void ScanFile(String input, int samplimit){
-        SAMFileReader sam = new SAMFileReader(new File(input));
-        sam.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        SamReader sam = SamReaderFactory.makeDefault()
+                .validationStringency(ValidationStringency.LENIENT)
+                .open(new File(input));
         if(!sam.hasIndex()){
             System.out.println("[METADATA] Could not find bam index file. Creating one now...");
             log.log(Level.INFO, "[METADATA] Generating bam index file for file: " + input);
             BAMIndexer b = new BAMIndexer(new File(input + ".bai"), sam.getFileHeader());
-            sam.enableFileSource(true);
+            
             sam.iterator().forEachRemaining((s) -> {
                 b.processAlignment(s);});
             b.finish();
-            sam.close();
+            try {
+                sam.close();
+            } catch (IOException ex) {
+                log.log(Level.SEVERE, "[METADATA] Error closing bam reader!", ex);
+            }
             System.out.println("[METADATA] Finished with bam index generation.");
             log.log(Level.FINE, "[METADATA] Finished generating bam index file.");
-            sam = new SAMFileReader(new File(input));
+            sam = SamReaderFactory.makeDefault()
+                .validationStringency(ValidationStringency.LENIENT)
+                .open(new File(input));
         }
         //sam.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
         header = sam.getFileHeader();
@@ -156,7 +167,11 @@ public class BamMetadataGeneration {
         }
         
         itr.close();
-        sam.close();
+        try {
+            sam.close();
+        } catch (IOException ex) {
+            log.log(Level.SEVERE, "[METADATA] Error closing bam file at end of Metadata generation!", ex);
+        }
         
         log.log(Level.INFO, "[METADATA] Finished read insert size sampling.");
     }

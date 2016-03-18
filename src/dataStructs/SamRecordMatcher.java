@@ -7,6 +7,12 @@
 package dataStructs;
 
 import TempFiles.TempDataClass;
+import htsjdk.samtools.Cigar;
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMReadGroupRecord;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.TextCigarCodec;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -29,13 +35,6 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import net.sf.samtools.Cigar;
-import net.sf.samtools.CigarOperator;
-import net.sf.samtools.SAMFormatException;
-import net.sf.samtools.SAMReadGroupRecord;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMRecordIterator;
-import net.sf.samtools.TextCigarCodec;
 import stats.ReadNameUtility;
 import workers.TextFileQuickSort;
 
@@ -108,7 +107,7 @@ public class SamRecordMatcher extends TempDataClass {
         else
             r = new SAMReadGroupRecord(defId);
         
-        Integer[] t = this.thresholds.get(r.getId());
+        Integer[] t = this.thresholds.get(r.getReadGroupId());
         int insert = Math.abs(a.getInferredInsertSize());
         
         int softclips = 0;
@@ -141,11 +140,11 @@ public class SamRecordMatcher extends TempDataClass {
         long bin = readNameHashBin(rnHash);
         //a.setReadName(String.valueOf(rnHash));
         
-        if(!SamTemp.containsKey(r.getId()))
-            SamTemp.put(r.getId(), new ConcurrentHashMap<>());
-        if(!SamTemp.get(r.getId()).containsKey(bin))
-            SamTemp.get(r.getId()).put(bin, new SamOutputHandle(this.threshold, r.getId(), this.tempOutBase));
-        SamTemp.get(r.getId()).get(bin).bufferedAdd(a, rnHash, num);
+        if(!SamTemp.containsKey(r.getReadGroupId()))
+            SamTemp.put(r.getReadGroupId(), new ConcurrentHashMap<>());
+        if(!SamTemp.get(r.getReadGroupId()).containsKey(bin))
+            SamTemp.get(r.getReadGroupId()).put(bin, new SamOutputHandle(this.threshold, r.getReadGroupId(), this.tempOutBase));
+        SamTemp.get(r.getReadGroupId()).get(bin).bufferedAdd(a, rnHash, num);
     }
 
     private long readNameHashBin(long hash){
@@ -456,7 +455,7 @@ public class SamRecordMatcher extends TempDataClass {
      * @param splits the temp split output handle
      * @param samItr a samjdk iterator over the input bam file.
      */
-    public void RetrieveMissingAnchors(Map<String, SplitOutputHandle> splits, SAMRecordIterator samItr){
+    public void RetrieveMissingAnchors(Map<String, SplitOutputHandle> splits, SamReader samItr){
         if(!this.anchorlookup.isEmpty()){
             int anchorcount = this.anchorlookup.keySet().stream().map((s) -> anchorlookup.get(s).keySet().size()).reduce(0,Integer::sum);
             System.err.println("[RECORD MATCHER] Identified " + anchorcount + " soft clipped reads that need anchors identified.");
@@ -468,21 +467,14 @@ public class SamRecordMatcher extends TempDataClass {
             for(String s : anchorlookup.keySet()){
                 anchorfound.put(s, false);
             }
-            while(samItr.hasNext()){
-                SAMRecord s;
-                try{
-                    s = samItr.next();
-                }catch(SAMFormatException ex){
-                    // This should ignore sam validation errors for crap reads
-                    System.err.println(ex.getMessage());
-                    continue;
-                }
+            for(SAMRecord s : samItr){
+                //TODO: add logic to catch validation errors
                 SAMReadGroupRecord r;
                 if(this.checkRGs)
                     r = s.getReadGroup();
                 else
                     r = new SAMReadGroupRecord(defId);
-                String rg = r.getId();
+                String rg = r.getReadGroupId();
                 if(this.anchorlookup.containsKey(rg)){
                     if(s.getReadName().matches("[_/]")){
                         String initread = s.getReadName().replaceAll("[_/]", "-");
@@ -502,7 +494,11 @@ public class SamRecordMatcher extends TempDataClass {
             long notfound = (long)anchorfound.size() - found;
             System.err.println("[RECORD MATCHER] Collected: " + found + " anchor reads and missed " + notfound + " out of " + anchorfound.size() + " original values");
         }
-        samItr.close();
+        try {
+            samItr.close();
+        } catch (IOException ex) {
+            log.log(Level.SEVERE, "Error closing sam reader in record matcher!", ex);
+        }
         // We close the anchor handle here just in case there were additional anchor entries to add.
         splits.keySet().stream().forEach((s) -> splits.get(s).CloseAnchorHandle());
     }

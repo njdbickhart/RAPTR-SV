@@ -7,6 +7,7 @@
 package dataStructs;
 
 import TempFiles.TempDataClass;
+import htsjdk.samtools.SAMRecord;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -16,7 +17,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import net.sf.samtools.SAMRecord;
 
 /**
  *
@@ -85,7 +85,7 @@ public class SamOutputHandle extends TempDataClass{
             for(Long clone : buffer.keySet()){
                 for(short num : buffer.get(clone).keySet()){
                     for(SAMRecord sam : buffer.get(clone).get(num)){
-                        this.output.write(clone + "\t" + num + "\t" + sam.getSAMString());
+                        this.output.write(clone + "\t" + num + "\t" + sam.toString());
                         //this.output.newLine();
                     }
                 }

@@ -11,6 +11,12 @@ import dataStructs.DivetOutputHandle;
 import dataStructs.SamRecordMatcher;
 import dataStructs.SplitOutputHandle;
 import file.BedSimple;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMRecordIterator;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.ValidationStringency;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -23,9 +29,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import net.sf.samtools.SAMFileHeader;
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMRecordIterator;
 import workers.BamMetadataGeneration;
 import workers.MrsFastRuntimeFactory;
 
@@ -103,18 +106,25 @@ public class PreprocessMode {
         });
         
         // Run through the BAM file generating split and divet data
-        final SAMFileReader reader = new SAMFileReader(new File(input));
-        reader.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        final SamReader reader = SamReaderFactory.makeDefault()
+                .validationStringency(ValidationStringency.LENIENT)
+                .open(new File(input));
         
         SAMFileHeader h = reader.getFileHeader();
         List<BedSimple> coords = this.getSamIntervals(h);
+        try {
+            reader.close();
+        } catch (IOException ex) {
+            log.log(Level.SEVERE, "[SAMRECORD] Error closing bam file: " + input, ex);
+        }
         
         List<SamRecordMatcher> collect = coords.parallelStream()
             .map((b) -> {
                 SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
                 try{
-                    SAMFileReader temp = new SAMFileReader(new File(input));
-                    temp.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+                    SamReader temp = SamReaderFactory.makeDefault()
+                        .validationStringency(ValidationStringency.LENIENT)
+                        .open(new File(input));
                     SAMRecordIterator itr = temp.queryContained(b.Chr(), b.Start(), b.End());
                     itr.forEachRemaining((k) -> w.bufferedAdd(k));
                     temp.close();
@@ -136,7 +146,6 @@ public class PreprocessMode {
         collect.stream().forEachOrdered((s) -> {
             worker.combineRecordMatcher(s);
         });
-        reader.close();
         System.out.println(System.lineSeparator() + "[PREPROCESS] Working on Variant calling from SAM data.");
         /*SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, outbase + "_tmp_", values, debug);
         SAMRecordIterator itr = reader.iterator();
@@ -153,10 +162,11 @@ public class PreprocessMode {
         }
         itr.close();*/
         
-        SAMFileReader next = new SAMFileReader(new File(input));
-        next.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        SamReader next = SamReaderFactory.makeDefault()
+                .validationStringency(ValidationStringency.LENIENT)
+                .open(new File(input));
         worker.convertToVariant(divets, splits);
-        worker.RetrieveMissingAnchors(splits, next.iterator());
+        worker.RetrieveMissingAnchors(splits, next);
         
         System.err.println("[PREPROCESS] Generated initial split and divet data.");
         log.log(Level.INFO, "[PREPROCESS] Generated initial split and divet data.");
