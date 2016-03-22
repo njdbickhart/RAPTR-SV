@@ -12,7 +12,6 @@ import dataStructs.SamRecordMatcher;
 import dataStructs.SplitOutputHandle;
 import file.BedSimple;
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMRecordIterator;
 import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;

@@ -6,10 +6,15 @@
 
 package dataStructs;
 
+import TempFiles.TempBinaryData;
 import TempFiles.TempDataClass;
+import TempFiles.binaryUtils.IntUtils;
+import TempFiles.binaryUtils.LongUtils;
 import htsjdk.samtools.SAMRecord;
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,21 +22,29 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
  * @author bickhart
  */
-public class SamOutputHandle extends TempDataClass{
+public class SamOutputHandle extends TempBinaryData{
     private final Map<Long, Map<Short, ArrayList<SAMRecord>>> buffer = new HashMap<>();
     private final int threshold;
     public final String readGroup;
     private int overhead = 0;
     
+    private static final Logger log = Logger.getLogger(SamOutputHandle.class.getName());
+    
     public SamOutputHandle(int threshold, String rg, String tmpoutname) {
         this.threshold = threshold;
         this.readGroup = rg;
-        this.createTemp(Paths.get(tmpoutname + "." + rg + "."));
+        try {
+            this.CreateTemp(Paths.get(tmpoutname + "." + rg + "."));
+        } catch (FileNotFoundException ex) {
+            log.log(Level.SEVERE, "[SAMOUTPUT] Error creating temporary file!", ex);
+        }
     }
     
     public void bufferedAdd(SAMRecord a, Long clone, short num) {
@@ -71,35 +84,65 @@ public class SamOutputHandle extends TempDataClass{
             ex.printStackTrace();
         }
         s.deleteTemp();
-    }
+    } 
     
-    @Override
-    public void readSequentialFile() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
+    
     public synchronized void dumpDataToDisk() {
-        this.openTemp('A');
-        try{
-            for(Long clone : buffer.keySet()){
-                for(short num : buffer.get(clone).keySet()){
-                    for(SAMRecord sam : buffer.get(clone).get(num)){
-                        this.output.write(clone + "\t" + num + "\t" + sam.toString());
-                        //this.output.newLine();
-                    }
-                }
-            }
-            this.output.flush();
-        }catch(IOException ex){
-            ex.printStackTrace();
-        }finally{
-            this.closeTemp('A');
-        }
+        this.DumpToTemp();
         this.buffer.clear();
     }
     
     public Path getTempFile(){
         return this.tempFile;
+    }
+
+    @Override
+    public void DumpToTemp() {
+        try{
+            final RandomAccessFile file = this.getFileForWriting();
+            buffer.keySet().stream()
+                    .forEach((clone) -> {
+                        buffer.get(clone).keySet().stream()
+                                .forEach((num) -> {
+                                    buffer.get(clone).get(num).forEach((sam) -> {
+                                        try {
+                                            processSAMInfoToBinary(clone, num, sam, file);
+                                        } catch (IOException ex) {
+                                            log.log(Level.SEVERE, "[SAMOUTPUT] Error interior loop of randomaccess write!", ex);
+                                        }
+                                    });
+                                });
+                    });
+        }catch(IOException ex){
+            log.log(Level.SEVERE, "[SAMOUTPUT] Error writing to temp file!", ex);
+        }
+    }
+    
+    /*
+    The information I need: 
+        clone hash (64 bit long), 
+        read num (8 bit int), 
+        chr (32 bit int identifier), 
+        pos (64 bit long),
+        align end (64 bit long),
+        sam flags (8 bit int),          
+        map quality (8bit int)
+    */    
+    private void processSAMInfoToBinary(long clone, short num, SAMRecord sam, RandomAccessFile file) throws IOException{
+        // clone hash
+        file.write(LongUtils.longToByteArray(clone));        
+        // read num
+        file.writeShort(num);        
+        // chr
+        // TODO: Need to create the chromosome table and share it among the different programs!
+        
+        // pos
+        file.writeLong(sam.getAlignmentStart());
+        // align end
+        file.writeLong(sam.getAlignmentEnd());        
+        // flags
+        file.write(IntUtils.Int16ToTwoByteArray(sam.getFlags()));        
+        // Map qual
+        file.write(sam.getMappingQuality());
     }
 }

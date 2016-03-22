@@ -8,7 +8,6 @@ package modes;
 
 import GetCmdOpt.SimpleModeCmdLineParser;
 import StrUtils.StrArray;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
 import java.io.BufferedReader;
