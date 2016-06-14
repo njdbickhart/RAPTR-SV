@@ -87,7 +87,6 @@ public class TextFileQuickSort {
 	 * Reads the input io stream and splits it into sorted chunks which are written to temporary files. 
 	 * @param in
          * @param identifier
-	 * @throws IOException
 	 */
 	public void splitChunks(InputStream in, String identifier){
 		outputs.clear();
@@ -161,7 +160,6 @@ public class TextFileQuickSort {
 
 	/**
 	 * Reads the temporary files created by splitChunks method and merges them in a sorted manner into the output stream.
-	 * @param os
 	 * @throws IOException
 	 */
 	public void mergeChunks() throws IOException{

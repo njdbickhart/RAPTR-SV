@@ -20,9 +20,10 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMRecordIterator;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordIterator;
+import htsjdk.samtools.ValidationStringency;
 import setWeightCover.BufferedInitialSet;
 import stats.GapOverlap;
 import stats.ReadNameUtility;
@@ -199,7 +200,7 @@ public class BufferedSetReader {
         HashMap<String, ArrayList<anchorRead>> anchors = new HashMap<>();
         //BufferedReader anchorReader = ReaderReturn.openFile(file.getAnchor().toFile());
         SAMFileReader sam = new SAMFileReader(file.getAnchor().toFile());
-        sam.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        sam.setValidationStringency(ValidationStringency.SILENT);
         //try{
             //String line;
             SAMRecordIterator itr = sam.iterator();
@@ -244,7 +245,7 @@ public class BufferedSetReader {
         this.hardUnbal = 0;
         
         try(SAMFileReader samReader = new SAMFileReader(file.getSplitsam().toFile())){
-            samReader.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+            samReader.setValidationStringency(ValidationStringency.SILENT);
             SAMRecordIterator iterator = samReader.iterator();
             while(iterator.hasNext()){
                 SAMRecord line = iterator.next();

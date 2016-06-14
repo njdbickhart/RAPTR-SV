@@ -21,13 +21,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import net.sf.samtools.DefaultSAMRecordFactory;
-import net.sf.samtools.SAMFileHeader;
-import net.sf.samtools.SAMFileWriter;
-import net.sf.samtools.SAMFileWriterFactory;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMRecordFactory;
-import net.sf.samtools.TextCigarCodec;
+import htsjdk.samtools.DefaultSAMRecordFactory;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileWriter;
+import htsjdk.samtools.SAMFileWriterFactory;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordFactory;
+import htsjdk.samtools.TextCigarCodec;
 
 /**
  * This program runs MrsFAST and returns the output BAM file name
@@ -92,7 +92,6 @@ public class MrsFastRuntimeFactory{
             SAMRecordFactory recordCreator = new DefaultSAMRecordFactory();
             SAMFileWriterFactory sfact = new SAMFileWriterFactory();
             SAMFileWriter bam = sfact.makeBAMWriter(header, false, new File(outbase + "." + rg + ".bam"));
-            TextCigarCodec cd = TextCigarCodec.getSingleton();
             try(BufferedReader input = Files.newBufferedReader(Paths.get(samstr), Charset.defaultCharset())){
                 String line = null;
                 while((line = input.readLine()) != null){
@@ -110,7 +109,7 @@ public class MrsFastRuntimeFactory{
                     sam.setReferenceName(segs[2]);
                     sam.setAlignmentStart(Integer.valueOf(segs[3]));
                     sam.setMappingQuality(Integer.valueOf(segs[4]));
-                    sam.setCigar(cd.decode(segs[5]));
+                    sam.setCigar(TextCigarCodec.decode(segs[5]));
                     sam.setMateReferenceName(segs[6]);
                     sam.setMateAlignmentStart(Integer.valueOf(segs[7]));
                     sam.setInferredInsertSize(Integer.valueOf(segs[8]));

@@ -15,15 +15,15 @@ import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import net.sf.samtools.CigarElement;
-import net.sf.samtools.CigarOperator;
-import net.sf.samtools.DefaultSAMRecordFactory;
-import net.sf.samtools.SAMFileHeader;
-import net.sf.samtools.SAMFileWriter;
-import net.sf.samtools.SAMFileWriterFactory;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMRecordFactory;
-import net.sf.samtools.TextCigarCodec;
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.DefaultSAMRecordFactory;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileWriter;
+import htsjdk.samtools.SAMFileWriterFactory;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordFactory;
+import htsjdk.samtools.TextCigarCodec;
 
 /**
  *
@@ -38,7 +38,6 @@ public class SplitOutputHandle {
     private SAMFileWriter anchorOut;
     private final SAMFileHeader header;
     private boolean fileopen = false;
-    private final TextCigarCodec cd = TextCigarCodec.getSingleton();
     private final int splitreadlen;
     private AtomicInteger discardCounter = new AtomicInteger(0);
     private AtomicInteger errorCounter = new AtomicInteger(0);
@@ -186,7 +185,7 @@ public class SplitOutputHandle {
     
     private int firstSplitSeg(String cigar, int readlen){
         int start = 0;
-        for(CigarElement e : cd.decode(cigar).getCigarElements()){
+        for(CigarElement e : TextCigarCodec.decode(cigar).getCigarElements()){
             if(e.getOperator().equals(CigarOperator.S) && e.getLength() > readlen * 0.20){
                 if (start == 0)
                     return e.getLength(); // We have a softclip area at the beginning
