@@ -29,13 +29,13 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import net.sf.samtools.Cigar;
-import net.sf.samtools.CigarOperator;
-import net.sf.samtools.SAMFormatException;
-import net.sf.samtools.SAMReadGroupRecord;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMRecordIterator;
-import net.sf.samtools.TextCigarCodec;
+import htsjdk.samtools.Cigar;
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMFormatException;
+import htsjdk.samtools.SAMReadGroupRecord;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordIterator;
+import htsjdk.samtools.TextCigarCodec;
 import stats.ReadNameUtility;
 import workers.TextFileQuickSort;
 
@@ -582,7 +582,7 @@ public class SamRecordMatcher extends TempDataClass {
         }
         Cigar c = null;
         try{
-            c = TextCigarCodec.getSingleton().decode(segs[7]);
+            c = TextCigarCodec.decode(segs[7]);
         }catch(Exception ex){
             log.log(Level.SEVERE, "[SAMMATCH] Issplit generated error with faulty alignment: " + StrUtils.StrArray.Join(segs, "\t"), ex);
         }
@@ -593,7 +593,7 @@ public class SamRecordMatcher extends TempDataClass {
     
     private boolean isAnchor(String[] segs){
         int fflags = Integer.parseInt(segs[3]);
-        Cigar c = TextCigarCodec.getSingleton().decode(segs[7]);
+        Cigar c = TextCigarCodec.decode(segs[7]);
         return (fflags & 0x4) != 0x4 && (fflags & 0x8) == 0x8 && !segs[4].equals("*") && !isOverSoftClipThreshold(c, segs[11].length());
     }
     

@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import net.sf.samtools.SAMFileReader;
+import htsjdk.samtools.SAMFileReader;
 import setWeightCover.weightCoverEvents;
 import workers.BufferedSetReader;
 import workers.FlatFile;

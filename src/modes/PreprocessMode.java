@@ -23,9 +23,10 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import net.sf.samtools.SAMFileHeader;
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMRecordIterator;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMRecordIterator;
+import htsjdk.samtools.ValidationStringency;
 import workers.BamMetadataGeneration;
 import workers.MrsFastRuntimeFactory;
 
@@ -104,7 +105,7 @@ public class PreprocessMode {
         
         // Run through the BAM file generating split and divet data
         final SAMFileReader reader = new SAMFileReader(new File(input));
-        reader.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        reader.setValidationStringency(ValidationStringency.SILENT);
         
         SAMFileHeader h = reader.getFileHeader();
         List<BedSimple> coords = this.getSamIntervals(h);
@@ -114,7 +115,7 @@ public class PreprocessMode {
                 SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
                 try{
                     SAMFileReader temp = new SAMFileReader(new File(input));
-                    temp.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+                    temp.setValidationStringency(ValidationStringency.SILENT);
                     SAMRecordIterator itr = temp.queryContained(b.Chr(), b.Start(), b.End());
                     itr.forEachRemaining((k) -> w.bufferedAdd(k));
                     temp.close();
@@ -154,7 +155,7 @@ public class PreprocessMode {
         itr.close();*/
         
         SAMFileReader next = new SAMFileReader(new File(input));
-        next.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        next.setValidationStringency(ValidationStringency.SILENT);
         worker.convertToVariant(divets, splits);
         worker.RetrieveMissingAnchors(splits, next.iterator());
         

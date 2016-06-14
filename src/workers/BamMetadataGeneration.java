@@ -18,12 +18,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import net.sf.samtools.BAMIndexer;
-import net.sf.samtools.SAMFileHeader;
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMReadGroupRecord;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMRecordIterator;
+import htsjdk.samtools.BAMIndexer;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMReadGroupRecord;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordIterator;
+import htsjdk.samtools.ValidationStringency;
 
 /**
  *
@@ -72,7 +73,7 @@ public class BamMetadataGeneration {
      */
     public void ScanFile(String input, int samplimit){
         SAMFileReader sam = new SAMFileReader(new File(input));
-        sam.setValidationStringency(SAMFileReader.ValidationStringency.SILENT);
+        sam.setValidationStringency(ValidationStringency.SILENT);
         if(!sam.hasIndex()){
             System.out.println("[METADATA] Could not find bam index file. Creating one now...");
             log.log(Level.INFO, "[METADATA] Generating bam index file for file: " + input);
@@ -86,7 +87,7 @@ public class BamMetadataGeneration {
             log.log(Level.FINE, "[METADATA] Finished generating bam index file.");
             sam = new SAMFileReader(new File(input));
         }
-        //sam.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
+        //sam.setValidationStringency(ValidationStringency.LENIENT);
         header = sam.getFileHeader();
         if(expectRG){
             
