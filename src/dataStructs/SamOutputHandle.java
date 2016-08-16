@@ -33,6 +33,7 @@ public class SamOutputHandle extends TempBinaryData{
     private final Map<Long, Map<Short, ArrayList<SAMRecord>>> buffer = new HashMap<>();
     private final int threshold;
     public final String readGroup;
+    public int totrecords = 0;
     private int overhead = 0;
     
     private static final Logger log = Logger.getLogger(SamOutputHandle.class.getName());
@@ -54,41 +55,59 @@ public class SamOutputHandle extends TempBinaryData{
             buffer.get(clone).put(num, new ArrayList<SAMRecord>());
         buffer.get(clone).get(num).add(a);
         overhead++;
+        totrecords++;
         if(overhead >= threshold){
             dumpDataToDisk();
             overhead = 0;
         }
     }
     
+    public RandomAccessFile getTempSamStats() throws IOException{
+        this.dumpDataToDisk();
+        return this.getFileForReading();
+    }
+    
+    /*
+        Sam information records take up 31 bytes, so I'll read and write
+        the whole block at once
+    */
     public void combineTempFiles(SamOutputHandle s){
-        s.dumpDataToDisk();
-        try(BufferedReader input = Files.newBufferedReader(s.getTempFile(), Charset.defaultCharset())){
+        //s.dumpDataToDisk();
+        RandomAccessFile file = null;
+        try(RandomAccessFile input = s.getTempSamStats()){
             if(!this.buffer.isEmpty())
                 this.dumpDataToDisk();
             
-            this.openTemp('A');
-            String line;
-            while((line = input.readLine()) != null){
-                line = line.trim();
-                
-                /*String[] segs = line.split("\t");
-                if(segs.length < 13){
-                System.err.println("DEBUG error!");
-                }*/
-                this.output.write(line);
-                this.output.newLine();
+            file = this.getFileForWriting();
+            byte[] locBuffer = new byte[31];
+            for(int x = 0; x < s.totrecords; x++){
+                int state = input.read(locBuffer);
+                if(state == -1 && x != s.totrecords - 1){
+                    log.log(Level.WARNING, "[SAMOUTPUT] Premature end of temp file in sam temp output merger! Reached record " + x + " out of " + s.totrecords);
+                    break;
+                }
+                file.write(locBuffer);
+                this.totrecords++;
             }
-            this.output.flush();
-            this.closeTemp('A');
+            
         }catch(IOException ex){
             ex.printStackTrace();
+        }finally{
+            try {
+                if(file != null)
+                    file.close();
+            } catch (IOException ex) {
+                log.log(Level.WARNING, "[SAMOUTPUT] Error closing temp files!", ex);
+            }
         }
         s.deleteTemp();
+        
     } 
     
     
     public synchronized void dumpDataToDisk() {
-        this.DumpToTemp();
+        if(!this.buffer.isEmpty())
+            this.DumpToTemp();
         this.buffer.clear();
     }
     
@@ -144,5 +163,13 @@ public class SamOutputHandle extends TempBinaryData{
         file.write(IntUtils.Int16ToTwoByteArray(sam.getFlags()));        
         // Map qual
         file.write(sam.getMappingQuality());
+    }
+
+    protected void deleteTemp() {
+        try {
+            this.dataFile.close();
+        } catch (IOException ex) {
+            log.log(Level.WARNING, "[SAMOUTPUT] Could not delete temp file!", ex);
+        }
     }
 }
