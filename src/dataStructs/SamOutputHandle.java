@@ -10,6 +10,7 @@ import TempFiles.TempBinaryData;
 import TempFiles.TempDataClass;
 import TempFiles.binaryUtils.IntUtils;
 import TempFiles.binaryUtils.LongUtils;
+import dataStructs.compressedseq.CompressedSeq;
 import htsjdk.samtools.SAMRecord;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -24,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import workers.BamMetadataGeneration;
 
 /**
  *
@@ -32,15 +34,17 @@ import java.util.logging.Logger;
 public class SamOutputHandle extends TempBinaryData{
     private final Map<Long, Map<Short, ArrayList<SAMRecord>>> buffer = new HashMap<>();
     private final int threshold;
+    private final BamMetadataGeneration metadata;
     public final String readGroup;
     public int totrecords = 0;
     private int overhead = 0;
     
     private static final Logger log = Logger.getLogger(SamOutputHandle.class.getName());
     
-    public SamOutputHandle(int threshold, String rg, String tmpoutname) {
+    public SamOutputHandle(int threshold, String rg, String tmpoutname, BamMetadataGeneration metadata) {
         this.threshold = threshold;
         this.readGroup = rg;
+        this.metadata = metadata;
         try {
             this.CreateTemp(Paths.get(tmpoutname + "." + rg + "."));
         } catch (FileNotFoundException ex) {
@@ -68,8 +72,8 @@ public class SamOutputHandle extends TempBinaryData{
     }
     
     /*
-        Sam information records take up 31 bytes, so I'll read and write
-        the whole block at once
+        Sam information records take up 32 bytes + x, so I'll read and write
+        the whole block in two steps
     */
     public void combineTempFiles(SamOutputHandle s){
         //s.dumpDataToDisk();
@@ -79,14 +83,20 @@ public class SamOutputHandle extends TempBinaryData{
                 this.dumpDataToDisk();
             
             file = this.getFileForWriting();
-            byte[] locBuffer = new byte[31];
+            byte[] locBuffer = new byte[32];
             for(int x = 0; x < s.totrecords; x++){
                 int state = input.read(locBuffer);
                 if(state == -1 && x != s.totrecords - 1){
                     log.log(Level.WARNING, "[SAMOUTPUT] Premature end of temp file in sam temp output merger! Reached record " + x + " out of " + s.totrecords);
                     break;
                 }
+                // There are 21 bases per every 8 bytes and the 32nd byte of our read record tells us how many to read!
+                int readbytes = (int)Math.ceil(locBuffer[31] * ((double)8 / 21));
+                byte[] seqbytes = new byte[readbytes];
+                input.read(seqbytes);
+                
                 file.write(locBuffer);
+                file.write(seqbytes);
                 this.totrecords++;
             }
             
@@ -146,6 +156,8 @@ public class SamOutputHandle extends TempBinaryData{
         align end (64 bit long),
         sam flags (8 bit int),          
         map quality (8bit int)
+        readlen (8 bit int)
+        read (x 64 bit longs)
     */    
     private void processSAMInfoToBinary(long clone, short num, SAMRecord sam, RandomAccessFile file) throws IOException{
         // clone hash
@@ -153,8 +165,7 @@ public class SamOutputHandle extends TempBinaryData{
         // read num
         file.writeShort(num);        
         // chr
-        // TODO: Need to create the chromosome table and share it among the different programs!
-        
+        file.write(this.metadata.getIndexByChr(sam.getReferenceName()));        
         // pos
         file.writeLong(sam.getAlignmentStart());
         // align end
@@ -163,6 +174,12 @@ public class SamOutputHandle extends TempBinaryData{
         file.write(IntUtils.Int16ToTwoByteArray(sam.getFlags()));        
         // Map qual
         file.write(sam.getMappingQuality());
+        // readlen
+        file.write(sam.getReadLength());
+        // bases
+        CompressedSeq seq = new CompressedSeq(sam.getReadString());
+        file.write(seq.getByteList());
+        seq.destroy();
     }
 
     protected void deleteTemp() {

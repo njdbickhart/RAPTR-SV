@@ -41,7 +41,7 @@ import stats.binary.SamBinaryConverter;
  *
  */
 public class SamBinaryFileQuickSort extends TempBinaryData{
-        private final Comparator<String[]> sorter;
+        private final Comparator<byte[]> sorter;
 	private int maxChunkSize = 100000000;
 	private List<File> outputs = new ArrayList<>();
 	private String tempDirectory = System.getProperty("java.io.tmpdir");
@@ -53,7 +53,7 @@ public class SamBinaryFileQuickSort extends TempBinaryData{
         private Path tempFile;
 
         public SamBinaryFileQuickSort(int[] colOrder, String tmpoutbase){
-		this.sorter = new ComparatorDelegate(colOrder);
+		this.sorter = new ComparatorDelegate();
                 //this.delimiter = delimiter;
                 this.colOrder = colOrder;
                 this.createTemp(Paths.get(tmpoutbase));

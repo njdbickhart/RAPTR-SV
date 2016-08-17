@@ -119,7 +119,7 @@ public class PreprocessMode {
         
         List<SamRecordMatcher> collect = coords.parallelStream()
             .map((b) -> {
-                SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
+                SamRecordMatcher w = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, metadata, debug);
                 try{
                     SamReader temp = SamReaderFactory.makeDefault()
                         .validationStringency(ValidationStringency.LENIENT)
@@ -141,7 +141,7 @@ public class PreprocessMode {
                 //.reduce(new SamRecordMatcher(samplimit, checkRG, outbase + ".tmp", values, debug), (SamRecordMatcher a, SamRecordMatcher b) -> {a.combineRecordMatcher(b); return a;});
         
         
-        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, debug);
+        SamRecordMatcher worker = new SamRecordMatcher(samplimit, checkRG, utilities.GetBaseName.getBaseName(outbase) + ".tmp", values, metadata, debug);
         collect.stream().forEachOrdered((s) -> {
             worker.combineRecordMatcher(s);
         });

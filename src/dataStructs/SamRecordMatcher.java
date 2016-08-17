@@ -36,6 +36,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import stats.ReadNameUtility;
+import workers.BamMetadataGeneration;
 import workers.TextFileQuickSort;
 
 /**
@@ -55,6 +56,7 @@ public class SamRecordMatcher extends TempDataClass {
     private final ReadNameUtility rn = new ReadNameUtility();
     private final boolean debug;
     private final String tempOutBase;
+    private final BamMetadataGeneration metadata;
     private Path debugOut;
     private BufferedWriter debugWriter;
     private Map<String, Map<String, Short>> anchorlookup;
@@ -67,14 +69,16 @@ public class SamRecordMatcher extends TempDataClass {
      * @param checkRGs true if the user wants the samheader read groups treated separately
      * @param tmpoutname The base temporary file output name
      * @param thresholds Obtained from the BamMetadataGeneration class -- [0] = lower insert size threshold [1] = upper insert size threshold
+     * @param metadata
      * @param debug true if debug "samsupport.tab" file should be generated 
      */
-    public SamRecordMatcher(int threshold, boolean checkRGs, String tmpoutname, Map<String, Integer[]> thresholds, boolean debug){
+    public SamRecordMatcher(int threshold, boolean checkRGs, String tmpoutname, Map<String, Integer[]> thresholds, BamMetadataGeneration metadata, boolean debug){
         this.threshold = threshold;
         this.checkRGs = checkRGs;
         this.thresholds = thresholds;
         //this.createTemp(Paths.get(tmpoutname));
         this.debug = debug;
+        this.metadata = metadata;
         if(debug){
             debugOut = Paths.get("SamSupport.tab");
             try {
@@ -143,12 +147,13 @@ public class SamRecordMatcher extends TempDataClass {
         if(!SamTemp.containsKey(r.getReadGroupId()))
             SamTemp.put(r.getReadGroupId(), new ConcurrentHashMap<>());
         if(!SamTemp.get(r.getReadGroupId()).containsKey(bin))
-            SamTemp.get(r.getReadGroupId()).put(bin, new SamOutputHandle(this.threshold, r.getReadGroupId(), this.tempOutBase));
+            SamTemp.get(r.getReadGroupId()).put(bin, new SamOutputHandle(this.threshold, r.getReadGroupId(), this.tempOutBase, this.metadata));
         SamTemp.get(r.getReadGroupId()).get(bin).bufferedAdd(a, rnHash, num);
     }
 
     private long readNameHashBin(long hash){
-        return hash >> 60;
+        // Simple binning strategy that relies on shifted to reduce the number of bins down to 15
+        return hash >>> 60;
     }
     
     /**

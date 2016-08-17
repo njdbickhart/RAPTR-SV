@@ -11,7 +11,6 @@ import dataStructs.DivetOutputHandle;
 import dataStructs.SplitOutputHandle;
 import htsjdk.samtools.BAMIndexer;
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMReadGroupRecord;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMRecordIterator;
@@ -25,9 +24,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  *
@@ -38,6 +39,8 @@ public class BamMetadataGeneration {
     private final HashMap<String, Double[]> values = new HashMap<>();
     private final HashMap<String, ArrayList<Integer>> insertSizes = new HashMap<>();
     private SAMFileHeader header;
+    private final Map<String, Integer> chrTableNumber = new HashMap<>();
+    private Map<Integer, String> chrTableRevLookup;
     private final boolean expectRG;
     private int mostCommonReadLen = 0;
     
@@ -108,6 +111,12 @@ public class BamMetadataGeneration {
             rgList.add("D");
             log.log(Level.FINE, "[METADATA] Not considering read groups.");
         }
+        
+        for(int i = 0; i < header.getSequenceDictionary().getSequences().size(); i++)
+            this.chrTableNumber.put(header.getSequenceDictionary().getSequences().get(i).getSequenceName(), i);
+        
+        chrTableRevLookup = this.chrTableNumber.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
         
         SAMRecordIterator itr = sam.iterator();
         Map<Integer, Integer> readlens = new HashMap<>(samplimit);
@@ -296,5 +305,17 @@ public class BamMetadataGeneration {
      */
     public SAMFileHeader getSamFileHeader(){
         return this.header;
+    }
+    
+    public String getChrbyIndex(int index){
+        if(this.chrTableRevLookup.containsKey(index))
+            return this.chrTableRevLookup.get(index);
+        return "NA";
+    }
+    
+    public int getIndexByChr(String chr){
+        if(this.chrTableNumber.containsKey(chr))
+            return this.chrTableNumber.get(chr);
+        return -1;
     }
 }
