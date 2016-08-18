@@ -7,6 +7,7 @@ package stats.binary;
 
 import TempFiles.binaryUtils.IntUtils;
 import TempFiles.binaryUtils.LongUtils;
+import dataStructs.compressedseq.CompressedSeq;
 import htsjdk.samtools.SAMRecord;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -14,20 +15,20 @@ import java.io.RandomAccessFile;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import workers.BamMetadataGeneration;
 
 /**
  *
  * @author Derek.Bickhart
  */
 public class SamBinaryConverter {
-    public static void processSAMInfoToBinary(long clone, short num, SAMRecord sam, RandomAccessFile file) throws IOException{
+    public static void processSAMInfoToBinary(BamMetadataGeneration metadata, long clone, short num, SAMRecord sam, RandomAccessFile file) throws IOException{
         // clone hash
         file.write(LongUtils.longToByteArray(clone));        
         // read num
         file.writeShort(num);        
         // chr
-        // TODO: Need to create the chromosome table and share it among the different programs!
-        
+        file.write(metadata.getIndexByChr(sam.getReferenceName()));        
         // pos
         file.writeLong(sam.getAlignmentStart());
         // align end
@@ -36,6 +37,12 @@ public class SamBinaryConverter {
         file.write(IntUtils.Int16ToTwoByteArray(sam.getFlags()));        
         // Map qual
         file.write(sam.getMappingQuality());
+        // readlen
+        file.write(sam.getReadLength());
+        // bases
+        CompressedSeq seq = new CompressedSeq(sam.getReadString());
+        file.write(seq.getByteList());
+        seq.destroy();
     }
     
     public static byte[] processSAMInfoToBinary(long clone, short num, SAMRecord sam) throws IOException{

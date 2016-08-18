@@ -215,6 +215,10 @@ public class SamBinaryFileQuickSort extends TempBinaryData{
                 os.close();
 	}
         
+        private byte[] getReadChunks(RandomAccessFile file){
+            
+        }
+        
         /*
         * return the temporary merged file
         */
